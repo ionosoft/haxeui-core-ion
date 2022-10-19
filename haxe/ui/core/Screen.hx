@@ -27,16 +27,13 @@ class Screen extends ScreenImpl {
     //***********************************************************************************************************
     // Instance
     //***********************************************************************************************************
-    private var _eventMap:EventMap;
+    private var _eventMap:EventMap = new EventMap();
 
     public var currentMouseX:Float = 0;
     public var currentMouseY:Float = 0;
     
     public function new() {
         super();
-        rootComponents = [];
-
-        _eventMap = new EventMap();
         registerEvent(MouseEvent.MOUSE_MOVE, function(e:MouseEvent) {
             currentMouseX = e.screenX;
             currentMouseY = e.screenY;
@@ -96,6 +93,11 @@ class Screen extends ScreenImpl {
         }
     }
     
+    /**
+     List components under a specific point (in screen co-ordinates).
+
+     Note: this function will return components at a specific point even if they have no backgrounds (or anything drawn into them). 
+    **/
     public function findComponentsUnderPoint<T:Component>(screenX:Float, screenY:Float, type:Class<T> = null):Array<Component> {
         var c:Array<Component> = [];
         for (r in rootComponents) {
@@ -113,6 +115,12 @@ class Screen extends ScreenImpl {
         return c;
     }
     
+    /**
+     Find out if there is a component under a specific point (in screen co-ordinates).
+
+     Note: this function will return true even if the components have no backgrounds (or anything drawn into them). Use hasSolidComponentUnderPoint
+           to additionally check if they are not transparent and have solid backgrounds
+    **/
     public function hasComponentUnderPoint<T:Component>(screenX:Float, screenY:Float, type:Class<T> = null):Bool {
         for (r in rootComponents) {
             if (r.hasComponentUnderPoint(screenX, screenY, type) == true) {
@@ -121,7 +129,26 @@ class Screen extends ScreenImpl {
         }
         return false;
     }
-    
+   
+    public function findSolidComponentUnderPoint<T:Component>(screenX:Float, screenY:Float, type:Class<T> = null):Array<Component> {
+        var solidComponents = [];
+        var components = findComponentsUnderPoint(screenX, screenY, type);
+        for (c in components) {
+            if (c.isComponentSolid) {
+                solidComponents.push(c);
+            }
+        }
+        return solidComponents;
+    }
+
+    /**
+     Find out if there is a 'solid' component under a specific point (in screen co-ordinates). A 'solid' component is one which has a background
+     of some kind (image or color) and is not transparent.
+    **/
+    public function hasSolidComponentUnderPoint<T:Component>(screenX:Float, screenY:Float, type:Class<T> = null):Bool {
+        return (findSolidComponentUnderPoint(screenX, screenY, type).length > 0);
+    }
+
     private function onThemeChanged() {
         for (c in rootComponents) {
             onThemeChangedChildren(c);

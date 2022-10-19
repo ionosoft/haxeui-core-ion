@@ -46,13 +46,23 @@ class TabBarLayout extends DefaultLayout {
         super.repositionChildren();
 
         var filler:Box = _component.findComponent("tabbar-filler", false);
+        var container:Box = _component.findComponent("tabbar-contents", false);
         if (filler != null) {
-            var container:Box = _component.findComponent("tabbar-contents", false);
             filler.width = _component.width - container.width;
             filler.height = _component.height;
             filler.left = container.width;
         }
-        
+
+        var max:Float = 0;
+        for (button in container.childComponents) {
+            if (button.height > max) {
+                max = button.height;
+            }
+        }
+        for (button in container.childComponents) {
+            button.height = max;
+        }
+
         var left:Button = _component.findComponent("tabbar-scroll-left", false);
         var right:Button = _component.findComponent("tabbar-scroll-right", false);
         if (left != null && hidden(left) == false) {
@@ -117,6 +127,14 @@ private class SelectedIndex extends DataBehaviour {
         }
         if (_value > builder._container.childComponents.length - 1) {
             _value = builder._container.childComponents.length - 1;
+            return;
+        }
+
+        var beforeChangeEvent = new UIEvent(UIEvent.BEFORE_CHANGE);
+        beforeChangeEvent.value = _value;
+        _component.dispatch(beforeChangeEvent);
+        if (beforeChangeEvent.canceled) {
+            _value = _previousValue;
             return;
         }
 
@@ -654,7 +672,7 @@ private class TabBarButtonLayout extends ButtonLayout {
         super.repositionChildren();
 
         var image = _component.findComponent("tab-close-button", Image, false);
-        if (image != null && component.componentWidth > 0) {
+        if (image != null && image.hidden == false && component.componentWidth > 0) {
             image.top = Std.int((component.componentHeight / 2) - (image.componentHeight / 2)) + marginTop(image) - marginBottom(image);
             image.left = component.componentWidth - image.componentWidth - paddingRight + marginLeft(image) - marginRight(image);
         }
@@ -664,7 +682,7 @@ private class TabBarButtonLayout extends ButtonLayout {
         var size = super.calcAutoSize(exclusions);
 
         var image = _component.findComponent("tab-close-button", Image, false);
-        if (image != null) {
+        if (image != null && image.hidden == false) {
             size.width += image.width + horizontalSpacing;
         }
 
