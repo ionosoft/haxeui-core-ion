@@ -55,12 +55,15 @@ class TabBarLayout extends DefaultLayout {
 
         var max:Float = 0;
         for (button in container.childComponents) {
+            button.syncComponentValidation();
             if (button.height > max) {
                 max = button.height;
             }
         }
-        for (button in container.childComponents) {
-            button.height = max;
+        if (max > 0) {
+            for (button in container.childComponents) {
+                button.height = max;
+            }
         }
 
         var left:Button = _component.findComponent("tabbar-scroll-left", false);
