@@ -1417,10 +1417,10 @@ class Component extends ComponentImpl implements IValidating {
 
         if (requiresInvalidation) {
             for (x in classesToAdd) {
-                classes.push(x);
+                addClass(x, false, false);
             }
             for (x in classesToRemove) {
-                classes.remove(x);
+                removeClass(x, false, false);
             }
 
             invalidateComponent(InvalidationFlags.ALL, true);
@@ -1882,7 +1882,9 @@ class Component extends ComponentImpl implements IValidating {
             }
 
             onResized();
+            #if !(haxeui_hxwidgets) // TODO: temp until better way
             dispatch(new UIEvent(UIEvent.RESIZE));
+            #end
 
             sizeChanged = true;
         }
@@ -1996,6 +1998,10 @@ class Component extends ComponentImpl implements IValidating {
         }
 
         handleSize(componentWidth, componentHeight, _style);
+
+        #if (haxeui_hxwidgets) // TODO: temp until better way
+        dispatch(new UIEvent(UIEvent.RESIZE));
+        #end
 
         if (_componentClipRect != null ||
             (style != null && style.clip != null && style.clip == true)) {
@@ -2131,6 +2137,10 @@ class Component extends ComponentImpl implements IValidating {
             handleFrameworkProperty("allowMouseInteraction", false);
         }
         
+        if (style.includeInLayout != null) {
+            this.includeInLayout = style.includeInLayout;
+        }
+
         if (_compositeBuilder != null) {
             _compositeBuilder.applyStyle(style);
         }

@@ -7,6 +7,7 @@ import haxe.ui.geom.Rectangle;
 import haxe.ui.core.Screen;
 import haxe.ui.core.Component;
 import haxe.ui.util.EventDispatcher;
+import haxe.ui.components.Image;
 
 class WindowManager extends EventDispatcher<WindowEvent> {
     private static var _instance:WindowManager;
@@ -56,7 +57,6 @@ class WindowManager extends EventDispatcher<WindowEvent> {
     }
 
     private function onContainerResized(event:UIEvent) {
-        trace("resized");
         for (window in windows) {
             if (window.maximized) {
                 var cx:Float = 0;
@@ -89,6 +89,7 @@ class WindowManager extends EventDispatcher<WindowEvent> {
         }
 
         window.windowManager = this;
+        window.opacity = 0;
         if (_container == null) {
             Screen.instance.addComponent(window);
         } else {
@@ -103,6 +104,8 @@ class WindowManager extends EventDispatcher<WindowEvent> {
         if (openMaximized) {
             maximizeWindow(window);
         }
+
+        window.fadeIn();
     }
 
     public function bringToFront(window:Window) {
@@ -145,7 +148,7 @@ class WindowManager extends EventDispatcher<WindowEvent> {
         if (prevWindow != null) {
             bringToFront(prevWindow);
         }
-}
+    }
 
     private function findPrevActivableWindow(window:Window):Window {
         var windowList = windows;
@@ -271,25 +274,54 @@ class WindowManager extends EventDispatcher<WindowEvent> {
         }
     }
 
-    public function closeWindow(window:Window) {
-        // lets find the prev window _before_ we've removed the window, since, once removed
-        // it we'll no longer be able to find its index, therefore cant find one previous 
-        // to it
-        var prevWindow = findPrevActivableWindow(window);
-        if (_container == null) {
-            Screen.instance.removeComponent(window);
-        } else {
-            _container.removeComponent(window);
-        }
-
-        var e = new WindowEvent(WindowEvent.WINDOW_CLOSED);
+    // returns if window was closed or not
+    @:access(haxe.ui.containers.windows.Window)
+    public function closeWindow(window:Window):Bool {
+        var e = new WindowEvent(WindowEvent.WINDOW_BEFORE_CLOSED);
         dispatch(e, window);
-
-        if (topMostWindow == window) {
-            if (prevWindow != null) {
-                bringToFront(prevWindow);
-            }
+        if (e.canceled) {
+            return false;
         }
+        var e = new WindowEvent(WindowEvent.WINDOW_BEFORE_CLOSED);
+        window.dispatch(e);
+        if (e.canceled) {
+            return false;
+        }
+
+        window.validateWindow(function(validated) {
+            if (validated) {
+                var existing = window.findComponent("windowCloseButton", Image);
+                if (existing != null) {
+                    existing.removeClass(":hover");
+                }
+                window.fadeOut(function() {
+                    // lets find the prev window _before_ we've removed the window, since, once removed
+                    // it we'll no longer be able to find its index, therefore cant find one previous 
+                    // to it
+                    var prevWindow = findPrevActivableWindow(window);
+
+                    var e = new WindowEvent(WindowEvent.WINDOW_CLOSED);
+                    window.dispatch(e);
+
+                    if (_container == null) {
+                        Screen.instance.removeComponent(window);
+                    } else {
+                        _container.removeComponent(window);
+                    }
+
+                    var e = new WindowEvent(WindowEvent.WINDOW_CLOSED);
+                    dispatch(e, window);
+
+                    if (topMostWindow == window) {
+                        if (prevWindow != null) {
+                            bringToFront(prevWindow);
+                        }
+                    }
+                });
+            }
+        });
+
+        return true;
     }
 
     public function reset() {

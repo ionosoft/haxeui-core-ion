@@ -17,8 +17,10 @@ class Module {
     public var properties(default, default):Array<ModulePropertyEntry>;
     public var preload(default, default):Array<ModulePreloadEntry>;
     public var locales(default, default):Array<ModuleLocaleEntry>;
+    public var validators(default, default):Array<ModuleValidatorEntry>;
     public var actionInputSources(default, default):Array<ModuleActionInputSourceEntry>;
     public var namespaces(default, default):Map<String, String>;
+    public var imageLoaders(default, default):Array<ModuleImageLoaderEntry>;
 
     public function new() {
         resourceEntries = [];
@@ -28,8 +30,10 @@ class Module {
         properties = [];
         preload = [];
         locales = [];
+        validators = [];
         actionInputSources = [];
         namespaces = new Map<String, String>();
+        imageLoaders = [];
     }
 
     public function validate() {
@@ -138,9 +142,29 @@ class ModuleLocaleResourceEntry {
     }
 }
 
+class ModuleValidatorEntry {
+    public var id(default, default):String;
+    public var className(default, default):String;
+    public var properties(default, default):Map<String, Any>;
+
+    public function new() {
+        properties = new Map<String, Any>();
+    }
+}
+
 class ModuleActionInputSourceEntry {
     public var className(default, default):String;
     
+    public function new() {
+    }
+}
+
+class ModuleImageLoaderEntry {
+    public var prefix(default, default):String;
+    public var className(default, default):String;
+    public var isDefault(default, default):Bool;
+    public var singleInstance(default, default):Bool;
+
     public function new() {
     }
 }

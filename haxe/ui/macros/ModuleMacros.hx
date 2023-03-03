@@ -1,5 +1,6 @@
 package haxe.ui.macros;
 
+import haxe.ui.util.TypeConverter;
 #if macro
 import haxe.ds.ArraySort;
 import haxe.io.Path;
@@ -165,6 +166,34 @@ class ModuleMacros {
                 }
             }
             
+            for (validator in m.validators) {
+                var id = validator.id;
+                var className = validator.className;
+                var parts = className.split(".");
+                var name:String = parts.pop();
+                var t:TypePath = {
+                    pack: parts,
+                    name: name
+                }
+
+
+                var convertedProperties:Map<String, Any> = null;
+                if (validator.properties != null) {
+                    for (propertyName in validator.properties.keys()) {
+                        var propertyValue = validator.properties.get(propertyName);
+                        if (convertedProperties == null) {
+                            convertedProperties = new Map<String, Any>();
+                        }
+                        convertedProperties.set(propertyName, TypeConverter.convertFrom(propertyValue));
+                    }
+                }
+                builder.add(macro
+                    haxe.ui.validators.ValidatorManager.instance.registerValidator($v{id}, function() {
+                        return new $t();
+                    }, $v{convertedProperties})
+                );
+            }
+
             for (inputSource in m.actionInputSources) {
                 var className = inputSource.className;
                 var parts = className.split(".");
@@ -176,6 +205,22 @@ class ModuleMacros {
                 
                 builder.add(macro
                     haxe.ui.actions.ActionManager.instance.registerInputSource(new $t())
+                );
+            }
+
+            for (imageLoader in m.imageLoaders) {
+                var className = imageLoader.className;
+                var parts = className.split(".");
+                var name:String = parts.pop();
+                var t:TypePath = {
+                    pack: parts,
+                    name: name
+                }
+
+                builder.add(macro
+                    haxe.ui.loaders.image.ImageLoader.instance.register($v{imageLoader.prefix}, function() {
+                        return new $t();
+                    }, $v{imageLoader.isDefault}, $v{imageLoader.singleInstance})
                 );
             }
         }
@@ -611,6 +656,9 @@ class ModuleMacros {
         #if module_resolution_verbose
         Sys.println("scanning class path for modules");
         #end
+        #if haxeui_macro_times
+        var stopTimerScan = Context.timer("ModuleMacros.loadModules - scanClassPath");
+        #end
         MacroHelpers.scanClassPath(function(filePath:String, base:String) {
             #if module_resolution_verbose
             Sys.println("    module found at '" + filePath + "' (base: '" + base + "')");
@@ -633,6 +681,9 @@ class ModuleMacros {
         }, ["module."]);
         #if module_resolution_verbose
         Sys.println(_modules.length + " module(s) found\n");
+        #end
+        #if haxeui_macro_times
+        stopTimerScan();
         #end
         
         ArraySort.sort(_modules, function(a, b):Int {

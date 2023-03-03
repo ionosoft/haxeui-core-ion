@@ -84,7 +84,7 @@ class DialogBase extends Box {
             hideDialog(DialogButton.CANCEL);
         }
 
-        registerEvent(UIEvent.USER_SUBMIT, onSubmit);
+        registerEvent(UIEvent.SUBMIT, onSubmit);
     }
 
     private function onSubmit(event:UIEvent) {
@@ -211,7 +211,7 @@ class DialogBase extends Box {
                 buttonComponent.text = text;
                 buttonComponent.userData = button;
                 buttonComponent.registerEvent(MouseEvent.CLICK, onFooterButtonClick);
-                if (buttonComponent.text == defaultButton) {
+                if (defaultButton != null && buttonComponent.text == defaultButton) {
                     buttonComponent.addClass("emphasized");
                 }
                 addFooterComponent(buttonComponent);

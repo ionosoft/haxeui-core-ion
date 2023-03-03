@@ -147,6 +147,10 @@ class MacroHelpers {
     private static var primaryClassPathExceptions:Array<EReg> = [];
     private static var secondaryClassPathExceptions:Array<EReg> = [];
     private static function loadClassPathExclusions(filePath:String) {
+        #if classpath_scan_verbose
+        Sys.println("classpath cache: loading classpath exclusions from '" + filePath + "'");
+        #end
+
         var contents = sys.io.File.getContent(filePath);
         var lines = contents.split("\n");
         for (line in lines) {
@@ -154,6 +158,11 @@ class MacroHelpers {
             if (line.length == 0 || StringTools.startsWith(line, ";")) {
                 continue;
             }
+
+            #if classpath_scan_verbose
+                Sys.println("    " + line);
+            #end
+
             primaryClassPathExceptions.push(new EReg(line, "gm"));
             secondaryClassPathExceptions.push(new EReg(line, "gm"));
         }
@@ -163,6 +172,10 @@ class MacroHelpers {
         if (classPathCache != null) {
             return;
         }
+
+        #if haxeui_macro_times
+        var stopTimer = Context.timer("MacroHelpers.buildClassPathCache");
+        #end
 
         classPathCache = [];
         var paths:Array<String> = Context.getClassPath();
@@ -190,9 +203,13 @@ class MacroHelpers {
             }
             cacheClassPathEntries(path, classPathCache, originalPath);
         }
+
+        #if haxeui_macro_times
+        stopTimer();
+        #end
     }
 
-    private static function cacheClassPathEntries(path, array, base) {
+    private static function cacheClassPathEntries(path:String, array:Array<ClassPathEntry>, base:String) {
         path = StringTools.trim(path);
         if (path.length == 0) {
             #if classpath_scan_verbose
@@ -233,7 +250,7 @@ class MacroHelpers {
                 }
             } else if (isDir == false) {
                 #if classpath_scan_verbose
-                Sys.println("classpath cache: adding '" + fullPath + "'");
+                Sys.println("classpath cache: adding '" + fullPath + "' (cache size: " + array.length + ")");
                 #end    
                 array.push({
                     base: base,
@@ -246,6 +263,10 @@ class MacroHelpers {
     }
 
     public static function scanClassPath(processFileFn:String->String->Bool, searchCriteria:Array<String> = null) {
+        #if haxeui_macro_times
+        var stopTimer = Context.timer("MacroHelpers.scanClassPath");
+        #end
+
         buildClassPathCache();
         for (entry in classPathCache) {
             #if classpath_scan_verbose
@@ -269,6 +290,10 @@ class MacroHelpers {
                 }
             }
         }
+
+        #if haxeui_macro_times
+        stopTimer();
+        #end
     }
 
     #end
