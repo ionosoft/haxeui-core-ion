@@ -1,7 +1,7 @@
 package haxe.ui;
 
-import haxe.ui.Preloader;
 import haxe.ui.Preloader.PreloadItem;
+import haxe.ui.Preloader;
 import haxe.ui.backend.AppImpl;
 import haxe.ui.backend.ToolkitOptions;
 import haxe.ui.core.Component;
@@ -20,7 +20,14 @@ class HaxeUIApp extends AppImpl {
         build();
     }
 
+    private var _readyCalled:Bool = false;
     public function ready(onReady:Void->Void, onEnd:Void->Void = null) {
+        if (_readyCalled) {
+            trace("WARNING: multiple calls to HaxeUIApp:ready detected, only one needed, skipping additional calls");
+            onReady();
+            return;
+        }
+        _readyCalled = true;
         init(onReady, onEnd);
     }
 
