@@ -1,5 +1,5 @@
 {
-    "version": "1.4.0",
+    "version": "1.6.0",
     "contributors": [
         "haxeui",
         "ianharrigan",
@@ -11,7 +11,7 @@
         "ui",
         "gui"
     ],
-    "releasenote": "1.4.0 release",
+    "releasenote": "1.6.0 release",
     "dependencies": {},
     "name": "haxeui-core",
     "description": "The core library of the HaxeUI framework",
