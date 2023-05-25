@@ -111,6 +111,12 @@ class ItemPickerBuilder extends CompositeBuilder {
         handler = Type.createInstance(handlerClass, []);
         handler.builder = this;
         handler.picker = picker;
+
+        picker.registerEvent(MouseEvent.MOUSE_DOWN, onPickerMouseDown);
+    }
+
+    private function onPickerMouseDown(_) {
+        picker.focus = true;
     }
 
     private var _panelSelectionEvent:String = UIEvent.CHANGE;
@@ -209,6 +215,10 @@ class ItemPickerBuilder extends CompositeBuilder {
 
     private function onPanelSelection(event:UIEvent) {
         handler.onPanelSelection(event);
+        if (!event.canceled) {
+            var changeEvent = new UIEvent(UIEvent.CHANGE);
+            picker.dispatch(changeEvent);
+        }
         hidePanel();
     }
 
@@ -302,6 +312,11 @@ class ItemPickerBuilder extends CompositeBuilder {
         }
 
         _panelFiller.width = panelWidth - picker.width;
+        if (_panelFiller.width > 0) {
+            _panelFiller.show();
+        } else {
+            _panelFiller.hide();
+        }
         panel.width = panelWidth - horizontalPadding;
 
         if (panelOrigin == "left") {
