@@ -82,6 +82,10 @@ class Actuator<T> {
 
         _stopped = false;
 
+        if ((target is Component) && cast(target, Component).animatable == false) {
+            duration = 0;
+        }
+
         if (duration == 0) {
             _apply(1);
             _finish();
@@ -286,7 +290,20 @@ class Actuator<T> {
         
         position = _easeFunc(position);
         for (details in _propertyDetails) {
-            Reflect.setProperty(target, details.propertyName, details.start + (details.change * position));
+            var newPos = details.start + (details.change * position);
+            #if haxeui_hxwidgets
+            // the actuator can flood haxeui-hxwidgets (and therefore wxWidgets) with far too many changes
+            // than wx (and presumably the OS) can handle, this slows that down by detecting values that are
+            // the same (rounded since wx only deals with ints anyway) and when they are the same adding
+            // a tiny sleep to stop the event queue getting flooded
+            newPos = Math.round(newPos);
+            if (details.lastValue != null && details.lastValue == newPos) {
+                Sys.sleep(.001);
+                continue;
+            }
+            #end
+            Reflect.setProperty(target, details.propertyName, newPos);
+            details.lastValue = newPos;
         }
 
         for (details in _stringPropertyDetails) {

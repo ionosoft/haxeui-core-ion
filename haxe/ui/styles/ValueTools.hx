@@ -8,6 +8,8 @@ import haxe.ui.themes.ThemeManager;
 import haxe.ui.util.Color;
 import haxe.ui.util.Variant;
 
+using StringTools;
+
 class ValueTools {
     private static var timeEReg:EReg = ~/^(-?\d+(?:\.\d+)?)(s|ms)$/gi;
 
@@ -30,20 +32,8 @@ class ValueTools {
             v = parseColor(s);
         } else if (s == "none") {
             v = Value.VNone;
-        } else if (s.indexOf("(") != -1 && StringTools.endsWith(s, ")")) {
-            var n = s.indexOf("(");
-            var f = s.substr(0, n);
-            var params = s.substr(n + 1, s.length - n - 2);
-            if (f == "calc") {
-                params = "'" + params + "'";
-            }
-            var vl = [];
-            for (p in params.split(",")) {
-                p = StringTools.trim(p);
-                vl.push(parse(p));
-            }
-            v = Value.VCall(f, vl);
-        } else if (StringTools.startsWith(s, "\"") && StringTools.endsWith(s, "\"")) {
+        }
+        else if (StringTools.startsWith(s, "\"") && StringTools.endsWith(s, "\"")) {
             v = Value.VString(s.substr(1, s.length - 2));
         } else if (StringTools.startsWith(s, "'") && StringTools.endsWith(s, "'")) {
             v = Value.VString(s.substr(1, s.length - 2));
@@ -54,20 +44,88 @@ class ValueTools {
         } else if (timeEReg.match(s)) {
             v = Value.VTime(Std.parseFloat(timeEReg.matched(1)), timeEReg.matched(2));
         } else {
-            var arr = s.split(" ");
-            if (arr.length == 1) {
-                v = Value.VConstant(s);
-            } else {
-                var vl = [];
-                for (a in arr) {
-                    a = StringTools.trim(a);
-                    vl.push(parse(a));
+            if (s.indexOf("(") != -1) {
+                var calls = extractCalls(s);
+                if (calls.length == 1) {
+                    var n = s.indexOf("(");
+                    var f = s.substr(0, n);
+                    var params = s.substr(n + 1, s.length - n - 2);
+                    if (f == "calc") {
+                        params = "'" + params + "'";
+                    }
+                    var vl = [];
+                    for (p in params.split(",")) {
+                        p = StringTools.trim(p);
+                        vl.push(parse(p));
+                    }
+                    v = Value.VCall(f, vl);
+                } else {
+                    var vl = [];
+                    for (a in calls) {
+                        a = StringTools.trim(a);
+                        vl.push(parse(a));
+                    }
+                    v = Value.VComposite(vl);
                 }
-                v = Value.VComposite(vl);
+            } else {
+                var arr = s.split(" ");
+                if (arr.length == 1) {
+                    v = Value.VConstant(s);
+                } else {
+                    var vl = [];
+                    for (a in arr) {
+                        a = StringTools.trim(a);
+                        vl.push(parse(a));
+                    }
+                    v = Value.VComposite(vl);
+                }
             }
         }
 
         return v;
+    }
+
+    private static function extractCalls(s:String) {
+
+        var calls = [];
+        var counter = 0;
+
+        var i = 0;
+        var startCall = 0;
+        var startParams = -1;
+        while (i < s.length) {
+            var char = s.charAt(i);
+            if (char == "(") {
+                if (startParams  == -1 ) startParams = i;
+                counter--;
+            } else if (char == ")") {
+                counter++;
+            }
+            // If counter is 0, then it is at the end of function, as same number of left and right parenthesis
+            if ((startParams != -1) && counter == 0) {
+                var preParams = s.substring(startCall, startParams);
+
+                // we check if there are "words" before the start of the function
+                // 1px solid rgb(255, 0, 0) each word will be push in his own call
+                var words = preParams.split(" ");
+                for ( j in 0...words.length) {
+                    var word = StringTools.trim(words[j]);
+                    // If the last word we attach the content between the parenthesis as it's a function
+                    if (j == words.length-1) {
+                        var func_params = s.substring(startParams, i + 1); 
+                        calls.push(word + func_params);
+                    }
+                    else {
+                        if (word != "" ) calls.push(word);
+                    }
+                }
+                
+                startCall = i + 1;
+                startParams = -1;
+            }
+            i++;
+        }
+        return calls;
     }
 
     public static function compositeParts(value:Value):Int {
@@ -357,6 +415,12 @@ class ValueTools {
     }
 
     public static function call(f, vl:Array<Value>):Any {
+        if (!cssFunctions.exists(f)) {
+            trace("unknown css function: " + f);
+            return null;
+        }
+
+        return cssFunctions.get(f)(vl);
 
         switch (f) {
             case "calc":
@@ -415,9 +479,79 @@ class ValueTools {
             case "lookup":
                 return Variant.toDynamic(StyleLookupMap.instance.get(ValueTools.string(vl[0])));
             case _:
+                trace("unknown css function: " + f);
                 return null;
         }
 
         return null;
     }
+
+    private static var cssFunctions:Map<String, Array<Value>->Any> = [
+        "calc" => function(vl) {
+            #if hscript
+
+            var parser = new hscript.Parser();
+            var program = parser.parseString(string(vl[0]));
+
+            var interp = new hscript.Interp();
+            return interp.expr(program);
+
+            #else
+
+            return null;
+
+            #end
+        },
+        "min" => function(vl) {
+            var minv:Float = Math.POSITIVE_INFINITY;
+            for (val in vl) {
+                var num:Null<Float> = calcDimension(val);
+                if (num == null)
+                    return null;
+                else if (num < minv)
+                    minv = num;
+            }
+            return minv;
+        },
+        "max" => function(vl) {
+            var maxv:Float = Math.NEGATIVE_INFINITY;
+            for (val in vl) {
+                var num:Null<Float> = calcDimension(val);
+                if (num == null)
+                    return null;
+                else if (num > maxv)
+                    maxv = num;
+            }
+            return maxv;
+        },
+        "clamp" => function(vl) {
+            var valNum:Null<Float> = calcDimension(vl[0]);
+            var minNum:Null<Float> = calcDimension(vl[1]);
+            var maxNum:Null<Float> = calcDimension(vl[2]);
+
+            if (valNum == null || minNum == null || maxNum == null)
+                return null;
+            else if (valNum < minNum)
+                return minNum;
+            else if (valNum > maxNum)
+                return maxNum;
+            else
+                return valNum;
+        },
+        "platform-color" => function(vl) {
+            return Platform.instance.getColor(ValueTools.string(vl[0]));
+        },
+        "theme-icon" => function(vl) {
+            return ThemeManager.instance.image(ValueTools.string(vl[0]));
+        },
+        "theme-image" => function(vl) {
+            return ThemeManager.instance.image(ValueTools.string(vl[0]));
+        },
+        "rgb" => function(vl) {
+            return Color.fromComponents(ValueTools.int(vl[0]), ValueTools.int(vl[1]), ValueTools.int(vl[2]), 0).toInt();
+        },
+        "lookup" => function(vl) {
+            return Variant.toDynamic(StyleLookupMap.instance.get(ValueTools.string(vl[0])));
+        }
+    ];
 }
