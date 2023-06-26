@@ -769,16 +769,22 @@ class Style {
         if (animationOptions == null) animationOptions = {};
     }
 
-    private function parseFilter(value, filters) {
+    private function parseFilter(value:Value, filters:Array<Filter>) {
         switch (value) {
             case Value.VCall(f, vl):
                 var arr = ValueTools.array(vl);
                 arr.insert(0, f);
-                filters.push(FilterParser.parseFilter(arr));
+                var filter = FilterParser.parseFilter(arr);
+                if (filter != null) {
+                    filters.push(filter);
+                }
             case Value.VConstant(f):
-                filters.push(FilterParser.parseFilter([f]));
+                var filter = FilterParser.parseFilter([f]);
+                if (filter != null) {
+                    filters.push(filter);
+                }
             case Value.VComposite(vl):
-                for ( v in vl ){
+                for (v in vl) {
                     parseFilter(v, filters);
                 }                  
             case _:
