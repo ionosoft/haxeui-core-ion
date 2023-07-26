@@ -3,7 +3,7 @@ package haxe.ui.events;
 import haxe.ui.constants.SortDirection;
 
 class SortEvent extends UIEvent {
-    public static final SORT_CHANGED:EventType<SortEvent> = EventType.name("sortchanged");
+    public static inline var SORT_CHANGED:String = "sortchanged";
     
     public var direction:SortDirection;
     

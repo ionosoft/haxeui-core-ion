@@ -13,8 +13,11 @@ class MathUtil {
     }
 
     public static inline function roundToNearest(v:Float, n:Float):Float {
-        var inv = 1.0 / n;
-        return Math.fround(v * inv) / inv;
+        var r = v % n;
+        if (r <= n / 2) {
+            return Math.fround(v - r);
+        }
+        return Math.fround(v + n - r);
     }
     
     public static inline function clamp(v:Null<Float>, min:Null<Float>, max:Null<Float>):Float {

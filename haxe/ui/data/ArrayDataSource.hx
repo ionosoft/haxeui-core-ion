@@ -59,16 +59,15 @@ class ArrayDataSource<T> extends DataSource<T> {
         return _array.indexOf(item);
     }
 
-    private override function handleAddItem(item:T):Int {
-        var index = _array.push(item) - 1;
+    private override function handleAddItem(item:T):T {
+        _array.push(item);
         if (_filteredArray != null && _filterFn != null) {
             if (_filterFn(_array.length - 1, item) == true) {
                 _filteredArray.push(item);
             }
         }
-        return index;
+        return item;
     }
-
 
     private override function handleInsert(index:Int, item:T):T {
         _array.insert(index, item);

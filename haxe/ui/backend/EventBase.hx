@@ -6,6 +6,6 @@ class EventBase {
     public function cancel() {
     }
 
-    @:noCompletion private function postClone(event:UIEvent) {
+    private function postClone(event:UIEvent) {
     }
 }

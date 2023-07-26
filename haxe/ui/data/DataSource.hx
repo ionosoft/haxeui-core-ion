@@ -71,13 +71,13 @@ class DataSource<T> {
         return handleIndexOf(item);
     }
 
-    public function add(item:T):Int {
-        var index = handleAddItem(item);
+    public function add(item:T):T {
+        var r = handleAddItem(item);
         handleChanged();
         if (_allowCallbacks == true && onAdd != null) {
-            onAdd(item);
+            onAdd(r);
         }
-        return index;
+        return r;
     }
 
     public function insert(index:Int, item:T):T {
@@ -204,8 +204,8 @@ class DataSource<T> {
         return 0;
     }
 
-    private function handleAddItem(item:T):Int {
-        return -1;
+    private function handleAddItem(item:T):T {
+        return null;
     }
 
     private function handleInsert(index:Int, item:T):T {

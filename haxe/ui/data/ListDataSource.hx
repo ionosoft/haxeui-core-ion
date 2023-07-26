@@ -41,9 +41,9 @@ class ListDataSource<T> extends DataSource<T> {
         return index;
     }
 
-    private override function handleAddItem(item:T):Int {
+    private override function handleAddItem(item:T):T {
         _array.add(item);
-        return _array.length - 1;
+        return item;
     }
 
     private override function handleInsert(index:Int, item:T):T {
