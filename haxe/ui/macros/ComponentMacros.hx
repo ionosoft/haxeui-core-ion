@@ -1058,11 +1058,13 @@ class ComponentMacros {
             propName = ComponentFieldMap.mapField(propName);
 
             if (StringTools.startsWith(propName, "on")) {
-                buildData.scripts.push({
-                    generatedVarName: varName,
-                    eventName: propName.toLowerCase(),
-                    code: propValue
-                });
+                if (propValue != null && StringTools.trim(propValue).length > 0) {
+                    buildData.scripts.push({
+                        generatedVarName: varName,
+                        eventName: propName.toLowerCase(),
+                        code: propValue
+                    });
+                }
             } else if (Std.string(propValue).indexOf("${") != -1) {
                 buildData.bindings.push({
                     generatedVarName: varName,
@@ -1077,7 +1079,8 @@ class ComponentMacros {
                     if (propInfo != null) {
                         propType = propInfo.propertyType;
                     }
-                    var propExpr = macro $v{TypeConverter.convertTo(TypeConverter.convertFrom(propValue), propType)};
+                    //var propExpr = macro $v{TypeConverter.convertTo(TypeConverter.convertFrom(propValue), propType)};
+                    var propExpr = macro $v{TypeConverter.convertFrom(propValue)};
                     builder.add(macro $i{varName}.$propName = $propExpr);
                 } else {
                     var propExpr = macro $v{TypeConverter.convertFrom(propValue)};
