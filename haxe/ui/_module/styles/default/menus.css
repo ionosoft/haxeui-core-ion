@@ -16,6 +16,10 @@
     vertical-align: center;
 }
 
+.menubar.rounded .menubar-button {
+    border-radius: 3px;
+}
+
 .menubar-button:hover {
     background-color: $selection-background-color;
     color: $selection-text-color;
@@ -66,6 +70,17 @@
     initial-width: 200px;
 }
 
+.menu.rounded {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.menu.auto-width {
+    width: auto;
+    initial-width: none;
+}
+
 .menu.expanded {
     border-top-width: 0px;
     border-top-size: 0px;
@@ -81,7 +96,6 @@
 *************************************************************************/
 .menuitem {
     background-color: $secondary-background-color;
-    width: 100%;
     padding: 6px;
     padding-left: 12px;
     cursor: pointer;
@@ -125,4 +139,13 @@
     width: 100%;
     background-color: $normal-border-color;
     horizontal-align: "center";
+}
+
+.menu.rounded .menuitem.first {
+    border-top-right-radius: 3px;
+}
+
+.menu.rounded .menuitem.last {
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
 }

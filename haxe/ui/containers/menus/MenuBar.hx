@@ -4,9 +4,9 @@ import haxe.ui.Toolkit;
 import haxe.ui.behaviours.DefaultBehaviour;
 import haxe.ui.components.Button;
 import haxe.ui.containers.HBox;
-import haxe.ui.containers.menus.Menu;
 import haxe.ui.containers.menus.Menu.MenuEvent;
 import haxe.ui.containers.menus.Menu.MenuEvents;
+import haxe.ui.containers.menus.Menu;
 import haxe.ui.core.Component;
 import haxe.ui.core.CompositeBuilder;
 import haxe.ui.core.Screen;
@@ -165,8 +165,12 @@ private class Events extends haxe.ui.events.Events {
                 filler.id = "menu-filler";
                 menu.addComponent(filler);
             }
+            menu.pauseEvent(MouseEvent.MOUSE_OVER, true);
             menu.show();
             menu.syncComponentValidation();
+            Toolkit.callLater(() -> {
+                menu.resumeEvent(MouseEvent.MOUSE_OVER, true);
+            });
 
             if (left + menu.actualComponentWidth > Screen.instance.actualWidth) {
                 left = target.screenLeft - menu.actualComponentWidth + target.actualComponentWidth;
@@ -180,15 +184,19 @@ private class Events extends haxe.ui.events.Events {
         _currentButton = target;
         _currentMenu = menu;
         
-
         if (hasChildren == true) {
             var cx = menu.width - _currentButton.width;
+            var offset:Float = 0;
+            if (_currentMenu.style != null && _currentMenu.style.borderRadiusTopRight > 0) {
+                offset = _currentMenu.style.borderRadiusTopRight - 1;
+            }
+            cx -= offset;
             var filler:Component = menu.findComponent("menu-filler", false);
             if (cx > 0 && filler != null) {
                 cx += 1;
                 filler.width = cx;
                 if (rtl == false) {
-                    filler.left = menu.width - cx;
+                    filler.left = menu.width - cx - offset;
                 }
             } else if (filler != null) {
                 menu.removeComponent(filler);
