@@ -243,15 +243,21 @@ class ComponentMacros {
         var c:ComponentInfo = buildComponentFromFile(builder, codeBuilder, resourcePath, buildData, "this", false);
         var superClass:String = builder.superClass.t.toString();
         var rootType = ModuleMacros.resolveComponentClass(c.type, c.namespace);
+        #if !haxeui_dont_impose_base_class
         if (haxe.ui.util.RTTI.hasSuperClass(builder.fullPath, rootType) == false) {
             Context.warning('The class hierarchy of "${builder.fullPath}" does not contain the root node of "${resourcePath}" (${rootType}) - this may have unintended consequences', pos);
         }
+        #else
+        builder.ctor.add(macro applyRootLayout($v{c.type}));
+        #end
 
         for (id in buildData.namedComponents.keys()) {
             var safeId:String = StringUtil.capitalizeHyphens(id);
             var varDescription = buildData.namedComponents.get(id);
             var cls:String = varDescription.type;
-            builder.addVar(safeId, TypeTools.toComplexType(Context.getType(cls)));
+            if (!builder.hasVar(safeId)) {
+                builder.addVar(safeId, TypeTools.toComplexType(Context.getType(cls)));
+            }
             codeBuilder.add(macro
                 $i{safeId} = $i{varDescription.generatedVarName}
             );
@@ -349,7 +355,11 @@ class ComponentMacros {
             if (classBuilder.hasInterface("haxe.ui.core.IDataComponent") == true && c.data != null) {
                 buildDataSourceCode(builder, c, 'ds_root', "this");
             }
+
             assignComponentProperties(builder, c, rootVarName, buildData);
+            if (c.layout != null) {
+                buildLayoutCode(builder, c, rootVarName);
+            }
         }
         
         if (classBuilder == null) {
@@ -398,6 +408,10 @@ class ComponentMacros {
         
         source = StringUtil.replaceVars(source, buildData.params);
         var c:ComponentInfo = ComponentParser.get("xml").parse(source);
+        #if haxeui_dont_impose_base_class
+        builder.add(macro applyRootLayout($v{c.type}));
+        #end
+
         for (s in c.styles) {
             if (s.scope == "global") {
                 builder.add(macro haxe.ui.Toolkit.styleSheet.parse($v{s.style}, "user"));
@@ -407,6 +421,10 @@ class ComponentMacros {
         if (buildRoot == true) {
             buildComponentNode(builder, c, 0, -1, buildData, false);
             builder.add(macro var $rootVarName = c0);
+        }
+
+        if (c.layout != null) {
+            buildLayoutCode(builder, c, rootVarName);
         }
         
         var fullScript = "";
@@ -884,7 +902,7 @@ class ComponentMacros {
 
         assignComponentProperties(builder, c, componentVarName, buildData);
         if (c.layout != null) {
-            buildLayoutCode(builder, c, id);
+            buildLayoutCode(builder, c, componentVarName);
         }
 
         if (classInfo.hasInterface("haxe.ui.core.IDataComponent") == true && c.data != null) {
@@ -941,10 +959,9 @@ class ComponentMacros {
     }
 
     private static function buildDataSourceCode(builder:CodeBuilder, c:ComponentInfo, dsVarName:String, componentVarName:String) {
-        var ds = new haxe.ui.data.DataSourceFactory<Dynamic>().fromString(c.dataString, haxe.ui.data.ArrayDataSource);
+        var items = new haxe.ui.data.DataSourceFactory<Dynamic>().fromStringToArray(c.dataString);
         builder.add(macro var $dsVarName = new haxe.ui.data.ArrayDataSource<Dynamic>());
-        for (i in 0...ds.size) {
-            var item = ds.get(i);
+        for (item in items) {
             var hasExpression:Bool = false;
             // lets first find out if any of the items are expressions
             for (f in Reflect.fields(item)) {
@@ -976,9 +993,9 @@ class ComponentMacros {
         builder.add(macro ($i{componentVarName} : haxe.ui.core.IDataComponent).dataSource = $i{dsVarName});
     }
     
-    private static function buildLayoutCode(builder:CodeBuilder, c:ComponentInfo, id:Int) {
+    private static function buildLayoutCode(builder:CodeBuilder, c:ComponentInfo, componentVarName:String) {
         var l = c.layout;
-        var layoutVarName = 'l${id}';
+        var layoutVarName = 'layout_${componentVarName}';
         var buildData = {
             namedComponents: new Map<String, NamedComponentDescription>(),
             bindingExprs: [],
@@ -999,7 +1016,7 @@ class ComponentMacros {
         }
         builder.add(macro var $layoutVarName = new $typePath());
         assignProperties(builder, layoutVarName, l.properties, buildData, null);
-        builder.add(macro $i{"c" + (id)}.layout = $i{layoutVarName});
+        builder.add(macro $i{componentVarName}.layout = $i{layoutVarName});
     }
 
     private static var _nextValidatorId = 0;
@@ -1026,7 +1043,7 @@ class ComponentMacros {
             validatorAssignExprs.push(macro $i{validatorId});
             _nextValidatorId++;
         }
-        if (id != 0) {
+        if (id != -1) {
             for (e in validatorExprs) {
                 builder.add(e);
             }

@@ -417,7 +417,7 @@ private class Builder extends CompositeBuilder {
             button.icon = icon;
             button.tooltip = child.tooltip;
             if (child.id != null) {
-                button.id = child.id + "_button";
+                button.id = child.id + "TabButton";
             }
             _tabs.addComponent(button);
 

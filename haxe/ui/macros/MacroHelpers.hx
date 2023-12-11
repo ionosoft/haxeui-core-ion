@@ -1,6 +1,7 @@
 package haxe.ui.macros;
 
 #if macro
+import haxe.macro.Type.ClassType;
 import haxe.io.Path;
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -101,8 +102,10 @@ class MacroHelpers {
                 for (file in files) {
                     if (StringTools.endsWith(file, ".hx") && !StringTools.startsWith(file, ".")) {
                         var name:String = file.substr(0, file.length - 3);
-                        var temp:Array<haxe.macro.Type> = Context.getModule(pack + "." + name);
-                        types = types.concat(temp);
+                        try {
+                            var temp:Array<haxe.macro.Type> = Context.getModule(pack + "." + name);
+                            types = types.concat(temp);
+                        } catch (e:Dynamic) { }
                     }
                 }
             }
@@ -300,6 +303,33 @@ class MacroHelpers {
         #if haxeui_macro_times
         stopTimer();
         #end
+    }
+
+    public static function shouldBuildExtension(classType:ClassType, extension:String):Bool {
+        var hasRequiredInterface = false;
+        for (i in classType.interfaces) {
+            if (i.t.toString() == extension) {
+                hasRequiredInterface = true;
+                break;
+            }
+        }
+
+        if (!hasRequiredInterface) {
+            return false;
+        }
+
+        var s = classType.superClass;
+        while (s != null) {
+            for (i in s.t.get().interfaces) {
+                if (i.t.toString() == extension) {
+                    return false;
+                }
+            }
+
+            s = s.t.get().superClass;
+        }
+
+        return true;
     }
 
     #end

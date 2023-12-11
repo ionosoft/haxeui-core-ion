@@ -15,9 +15,16 @@ class EventMap  {
         return _map.keys();
     }
 
-    public function removeAll() {
-        for (type in _map.keys()) {
-            _map.get(type).removeAll();
+    public function removeAll<T:UIEvent>(type:EventType<T> = null) {
+        if (type != null) {
+            if (_map.exists(type)) {
+                _map.get(type).removeAll();
+                _map.remove(type);
+            }
+        } else {
+            for (type in _map.keys()) {
+                _map.get(type).removeAll();
+            }
         }
     }
 

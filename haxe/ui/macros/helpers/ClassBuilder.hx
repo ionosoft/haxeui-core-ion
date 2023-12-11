@@ -213,6 +213,23 @@ class ClassBuilder {
         return (findField(name) != null);
     }
 
+    public function hasFieldSuper(name:String):Bool {
+        if (classType == null || classType.superClass == null) {
+            return false;
+        }
+        var superClassType = classType.superClass.t.get();
+        #if (haxe_ver < 4)
+        // TODO: this is a really ugly haxe3 hack / workaround - once haxe4 stabalises this *MUST* be removed - its likely brittle and ill conceived!
+        if (findField(name) != null) {
+            return true;
+        }
+        return (haxe3FindField(superClassType, name) != null);
+        #else
+        var r = (findFieldEx(superClassType, name) != null);
+        #end
+        return r;
+    }
+
     #if (haxe_ver < 4)
     // TODO: this is a really ugly haxe3 hack / workaround - once haxe4 stabalises this *MUST* be removed - its likely brittle and ill conceived!
     private function haxe3FindField(c:ClassType, name:String) {
@@ -363,6 +380,13 @@ class ClassBuilder {
             }
         }
         return r;
+    }
+
+    public function addMeta(name:String, params:Array<Expr> = null) {
+        if (params == null) {
+            params = [];
+        }
+        classType.meta.add(name, params, pos);
     }
 
     public function getClassMeta(name:String, index:Int = 0):MetadataEntry {

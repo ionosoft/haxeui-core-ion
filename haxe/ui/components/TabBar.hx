@@ -30,6 +30,12 @@ class TabBar extends Component {
     @:behaviour(ButtonHeight, null)     public var buttonHeight:Null<Float>;
     @:call(RemoveTab)                   public function removeTab(index:Int);
     @:call(GetTab)                      public function getTab(index:Int):Component;
+
+    public var tabButtons(get, null):Array<Button>;
+    private function get_tabButtons():Array<Button> {
+        var container:Box = findComponent("tabbar-contents", false);
+        return container.findComponents(Button, 1);
+    }
 }
 
 //***********************************************************************************************************
@@ -147,6 +153,7 @@ private class SelectedIndex extends DataBehaviour {
             if (selectedTab != null) {
                 //cast(selectedTab, InteractiveComponent).allowFocus = true;
                 selectedTab.removeClass("tabbar-button-selected");
+                selectedTab.invalidateComponentStyle(false, true);
                 var label = selectedTab.findComponent(Label);
                 if (label != null) {
                     label.invalidateComponent();
@@ -157,6 +164,7 @@ private class SelectedIndex extends DataBehaviour {
                 }
             }
             tab.addClass("tabbar-button-selected");
+            tab.invalidateComponentStyle(false, true);
             //cast(tab, InteractiveComponent).allowFocus = false;
             var label = tab.findComponent(Label);
             if (label != null) {
@@ -265,8 +273,10 @@ private class RemoveTab extends Behaviour {
                 }
             }
 
-            builder._container.removeComponentAt(index);
-            _component.dispatch(new UIEvent(UIEvent.CLOSE, index));
+            var removedButton = builder._container.removeComponentAt(index);
+            var event = new UIEvent(UIEvent.CLOSE, index);
+            event.target = removedButton;
+            _component.dispatch(event);
 
             cast(_component, TabBar).selectedIndex = newSelectedIndex;
         }
@@ -455,6 +465,9 @@ private class Builder extends CompositeBuilder {
         }
         if (_tabbar.buttonHeight != null) {
             button.componentHeight = _tabbar.buttonHeight;
+        }
+        if (child.styleNames != null) {
+            button.styleNames = child.styleNames;
         }
 
         return button;

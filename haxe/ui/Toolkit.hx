@@ -17,6 +17,9 @@ import haxe.ui.util.Properties;
 #error "HaxeUI requires Haxe 4+"
 #end
 
+#if haxeui_expose_all
+@:expose
+#end
 class Toolkit {
     public static var styleSheet:CompositeStyleSheet = new CompositeStyleSheet();
 
@@ -58,6 +61,7 @@ class Toolkit {
         ModuleMacros.processModules();
         NativeMacros.processNative();
         buildBackend();
+        haxe.ui.locale.LocaleManager.instance.init();
         _built = true;
     }
 

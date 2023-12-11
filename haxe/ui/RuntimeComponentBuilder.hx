@@ -1,5 +1,7 @@
 package haxe.ui;
 
+import haxe.ui.util.RTTI;
+#if !macro
 import haxe.ui.Toolkit;
 import haxe.ui.components.Button;
 import haxe.ui.components.Image;
@@ -8,24 +10,42 @@ import haxe.ui.core.ComponentClassMap;
 import haxe.ui.core.ComponentFieldMap;
 import haxe.ui.core.IDataComponent;
 import haxe.ui.core.IDirectionalComponent;
+import haxe.ui.core.InteractiveComponent;
 import haxe.ui.layouts.Layout;
 import haxe.ui.layouts.LayoutFactory;
 import haxe.ui.parsers.ui.ComponentInfo;
 import haxe.ui.parsers.ui.ComponentParser;
 import haxe.ui.parsers.ui.LayoutInfo;
+import haxe.ui.parsers.ui.ValidatorInfo;
 import haxe.ui.parsers.ui.resolvers.AssetResourceResolver;
 import haxe.ui.parsers.ui.resolvers.ResourceResolver;
 import haxe.ui.util.SimpleExpressionEvaluator;
 import haxe.ui.util.TypeConverter;
 import haxe.ui.util.Variant;
+#end
 
 class RuntimeComponentBuilder {
+    #if macro
+
+    public static function build(file:String) {
+        return null;
+    }
+
+    #else
+
+    public static function build(file:String) {
+        return fromAsset(file);
+    }
+
+    #end
+
+    #if !macro
     public static function fromAsset(assetId:String):Component {
         var data = ToolkitAssets.instance.getText(assetId);
         return fromString(data, null, new AssetResourceResolver(assetId));
     }
     
-    public static function fromString(data:String, type:String = null, resourceResolver:ResourceResolver = null, callback:Component->Void = null):Component {
+    public static function fromString(data:String, type:String = null, resourceResolver:ResourceResolver = null):Component {
         if (data == null || data.length == 0) {
             return null;
         }
@@ -48,7 +68,7 @@ class RuntimeComponentBuilder {
                 Toolkit.styleSheet.parse(style.style);
             }
         }
-        var component = buildComponentFromInfo(c, callback);
+        var component = buildComponentFromInfo(c);
 
         var fullScript = "";
         for (scriptString in c.scriptlets) {
@@ -60,7 +80,7 @@ class RuntimeComponentBuilder {
         return component;
     }
     
-    private static function buildComponentFromInfo(c:ComponentInfo, callback:Component->Void):Component {
+    private static function buildComponentFromInfo(c:ComponentInfo):Component {
         if (c.condition != null && SimpleExpressionEvaluator.evalCondition(c.condition) == false) {
             return null;
         }
@@ -72,9 +92,19 @@ class RuntimeComponentBuilder {
         }
 
         var tempComponent:Component = Type.createEmptyInstance(Type.resolveClass(className));
+        var isDelegate = false;
         if (tempComponent == null) {
-            trace("WARNING: could not create class instance: " + className);
-            return null;
+            var tempComponent2 = Type.createEmptyInstance(Type.resolveClass(className));
+            // "delegate components" are a way of deferring creation of the component to wrapper class
+            // this can be useful to allow runtime components to _not_ have to extend from Component
+            // but still be used in xml layouts and such (like UI fragmenets) providing the class can
+            // be found (and created) in the ComponentClassMap
+            if ((tempComponent2 is IComponentDelegate)) {
+                isDelegate = true;
+            } else {
+                trace("WARNING: could not create class instance: " + className);
+                return null;
+            }
         }
         
         var component:Component = null;
@@ -98,6 +128,9 @@ class RuntimeComponentBuilder {
                     return null;
                 }
             }
+        } else if (isDelegate) {
+            var componentDelegate:IComponentDelegate = Type.createInstance(Type.resolveClass(className), []);
+            component = componentDelegate.component;
         }
         if (component == null) {
             component = Type.createInstance(Type.resolveClass(className), []);
@@ -132,12 +165,13 @@ class RuntimeComponentBuilder {
             if (StringTools.startsWith(propName, "on")) {
                 //component.addScriptEvent(propName, propValue);
             } else {
-                // TODO: weirdly, for Images (also icons) setProperty doesnt work correctly - or the behaviour...... misbehaves
-                if (propName == "resource" && (component is Image)) {
-                    cast(component, Image).resource = Variant.fromDynamic(propValue);
-                } else if (propName == "icon" && (component is Button)) {
-                    cast(component, Button).icon = Variant.fromDynamic(propValue);
-                } else {
+                var propInfo = RTTI.getClassProperty(Type.getClassName(Type.getClass(component)), propName);
+                // if the property is a variant, we'll need to make sure (explicity) that it is a converted
+                // since the abstract wont exist at runtime, so it wont have the from, to, etc
+                if (propInfo != null && propInfo.propertyType == "variant") {
+                    propValue = Variant.fromDynamic(propValue);
+                    Reflect.setProperty(component, propName, propValue);
+            } else {
                     propValue = TypeConverter.convertFrom(propValue);
                     Reflect.setProperty(component, propName, propValue);
                 }
@@ -148,18 +182,37 @@ class RuntimeComponentBuilder {
             cast(component, IDataComponent).dataSource = new haxe.ui.data.DataSourceFactory<Dynamic>().fromString(c.dataString, haxe.ui.data.ArrayDataSource);
         }
 
+        if (c.validators != null) {
+            buildValidators(c, component, c.validators);
+        }
+
         for (childInfo in c.children) {
-            var childComponent = buildComponentFromInfo(childInfo, callback);
+            var childComponent = buildComponentFromInfo(childInfo);
             if (childComponent != null) {
                 component.addComponent(childComponent);
             }
         }
 
-        if (callback != null) {
-            callback(component);
-        }
-
         return component;
+    }
+
+    private static function buildValidators(c:ComponentInfo, component:Component, validators:Array<ValidatorInfo>) {
+        var list = [];
+        for (validator in validators) {
+            var type = validator.type;
+            var instance = haxe.ui.validators.ValidatorManager.instance.createValidator(type);
+            if (validator.properties != null) {
+                for (propertyName in validator.properties.keys()) {
+                    var propertyValue = validator.properties.get(propertyName);
+                    var convertedPropertyValue = TypeConverter.convertFrom(propertyValue);
+                    instance.setProperty(propertyName, convertedPropertyValue);
+                }
+            }
+            list.push(instance);
+        }
+        if (list.length > 0 && (component is InteractiveComponent)) {
+            cast(component, InteractiveComponent).validators = list;
+        }
     }
 
     private static function buildLayoutFromInfo(l:LayoutInfo):Layout {
@@ -176,4 +229,11 @@ class RuntimeComponentBuilder {
 
         return layout;
     }
+    #end
 }
+
+#if !macro
+interface IComponentDelegate {
+    public var component(get, set):haxe.ui.core.Component;
+}
+#end

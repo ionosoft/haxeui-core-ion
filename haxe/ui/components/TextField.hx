@@ -1,14 +1,14 @@
 package haxe.ui.components;
 
-import haxe.ui.core.Platform;
-import haxe.ui.events.KeyboardEvent;
 import haxe.ui.behaviours.DataBehaviour;
 import haxe.ui.behaviours.ValueBehaviour;
 import haxe.ui.core.Component;
 import haxe.ui.core.CompositeBuilder;
 import haxe.ui.core.InteractiveComponent;
+import haxe.ui.core.Platform;
 import haxe.ui.events.Events;
 import haxe.ui.events.FocusEvent;
+import haxe.ui.events.KeyboardEvent;
 import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
 import haxe.ui.geom.Size;
@@ -78,6 +78,7 @@ class TextField extends InteractiveComponent {
      * If no icon is set, the text field will be displayed without any icon. The default is no icon.
      */
     @:clonable @:behaviour(IconBehaviour)                   public var icon:String;
+    @:style(layout)                                         public var iconPosition:String;
     
     /**
      * The (zero based) position of the caret within the textfield
@@ -103,6 +104,15 @@ private class TextFieldLayout extends DefaultLayout {
     private override function repositionChildren() {
         var icon:Image = component.findComponent(Image, false);
         var xpos:Float = paddingLeft;
+
+        var decorator = findComponent(Decorator);
+        var decoratorWidth:Float = 0;
+        if (decorator != null) {
+            decorator.left = _component.width - decorator.width - borderSize;
+            decorator.top = borderSize;
+            decoratorWidth = decorator.width;
+        }
+
         if (icon != null) {
             switch (iconPosition) {
                 case "left":
@@ -110,15 +120,9 @@ private class TextFieldLayout extends DefaultLayout {
                     icon.top = (component.componentHeight / 2) - (icon.componentHeight / 2);
                     xpos += icon.componentWidth + horizontalSpacing;
                 case "right":
-                    icon.left = component.componentWidth - icon.componentWidth - paddingRight;
+                    icon.left = component.componentWidth - icon.componentWidth - paddingRight - decoratorWidth;
                     icon.top = (component.componentHeight / 2) - (icon.componentHeight / 2);
             }
-        }
-
-        var decorator = findComponent(Decorator);
-        if (decorator != null) {
-            decorator.left = _component.width - decorator.width - borderSize;
-            decorator.top = borderSize;
         }
 
         if (component.hasTextInput() == true) {

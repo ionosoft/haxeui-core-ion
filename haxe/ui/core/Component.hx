@@ -1,10 +1,7 @@
 package haxe.ui.core;
 
 import haxe.ui.backend.ComponentImpl;
-import haxe.ui.dragdrop.DragManager;
-import haxe.ui.dragdrop.DragOptions;
 import haxe.ui.events.AnimationEvent;
-import haxe.ui.events.DragEvent;
 import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
 import haxe.ui.geom.Rectangle;
@@ -37,7 +34,11 @@ import Std.is as isOfType;
  * Base class of all HaxeUI controls
  */
 @:allow(haxe.ui.backend.ComponentImpl)
-class Component extends ComponentImpl implements IValidating {
+class Component extends ComponentImpl
+    #if haxeui_allow_drag_any_component
+    implements haxe.ui.extensions.Draggable
+    #end
+    implements IValidating {
 
     /**
      * Creates a new, default, HaxeUI `Component`.
@@ -271,58 +272,6 @@ class Component extends ComponentImpl implements IValidating {
         return Toolkit.screen;
     }
 
-    //***********************************************************************************************************
-    // Drag & Drop
-    //***********************************************************************************************************
-
-    /**
-     * When set to `true`, this component should be drag&drop-able.
-     */
-    public var draggable(get, set):Bool;
-    private function get_draggable():Bool {
-        return DragManager.instance.isRegisteredDraggable(this);
-    }
-    private function set_draggable(value:Bool):Bool {
-        if (value == true) {
-            DragManager.instance.registerDraggable(this, dragOptions);
-        } else {
-            DragManager.instance.unregisterDraggable(this);
-        }
-        return value;
-    }
-
-    @:noCompletion private var _dragInitiator:Component = null;
-    public var dragInitiator(get, set):Component;
-    private function get_dragInitiator():Component {
-        return _dragInitiator;
-    }
-    private function set_dragInitiator(value:Component):Component {
-        _dragInitiator = value;
-        if (value != null) {
-            if (_dragOptions != null) {
-                _dragOptions.mouseTarget = value;
-            }
-            draggable = true;
-        } else {
-            draggable = false;
-        }
-        return value;
-    }
-
-    @:noCompletion private var _dragOptions:DragOptions = null;
-    public var dragOptions(get, set):DragOptions;
-    private function get_dragOptions():DragOptions {
-        if (_dragOptions == null) {
-            _dragOptions = { mouseTarget: _dragInitiator };
-        }
-        return _dragOptions;
-    }
-    private function set_dragOptions(value:DragOptions):DragOptions {
-        _dragOptions = value;
-        draggable = true;
-        return value;
-    }
-    
     //***********************************************************************************************************
     // Binding related
     //***********************************************************************************************************
@@ -584,7 +533,7 @@ class Component extends ComponentImpl implements IValidating {
         this._isDisposed = true;
         this.removeAllComponents(true);
         this.destroyComponent();
-        this.unregisterEvents();
+        this.unregisterEventsInternal();
         if (this.hasTextDisplay()) {
             this.getTextDisplay().dispose();
         }
@@ -662,7 +611,7 @@ class Component extends ComponentImpl implements IValidating {
         }
         if (dispose == true) {
             child.destroyComponent();
-            child.unregisterEvents();
+            child.unregisterEventsInternal();
         }
         
         assignPositionClasses(invalidate);
@@ -1728,6 +1677,15 @@ class Component extends ComponentImpl implements IValidating {
         return list;
     }
 
+    public var namedComponentsMap(get, null):Map<String, Component>;
+    private function get_namedComponentsMap():Map<String, Component> {
+        var map = new Map<String, Component>();
+        for (c in namedComponents) {
+            map.set(c.id, c);
+        }
+        return map;
+    }
+
     /**
      * Adds multiple components from `parent`, which name can be found in `list`.
      * 
@@ -1748,21 +1706,6 @@ class Component extends ComponentImpl implements IValidating {
         }
     }
 
-    /**
-     * Utility property to add a single `DragEvent.DRAG_START` event
-     */
-    @:event(DragEvent.DRAG_START)       public var onDragStart:DragEvent->Void;    
-    
-    /**
-     * Utility property to add a single `DragEvent.DRAG` event
-     */
-    @:event(DragEvent.DRAG)             public var onDrag:DragEvent->Void;    
-    
-    /**
-     * Utility property to add a single `DragEvent.DRAG_END` event
-     */
-    @:event(DragEvent.DRAG_END)         public var onDragEnd:DragEvent->Void;    
-    
     /**
      * Utility property to add a single `AnimationEvent.START` event
      */

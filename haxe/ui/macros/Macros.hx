@@ -64,6 +64,10 @@ class Macros {
     
     macro static function build():Array<Field> {
         var builder = new ClassBuilder(Context.getBuildFields(), Context.getLocalType(), Context.currentPos());
+        #if haxeui_expose_all
+        builder.addMeta(":expose");
+        #end
+
         #if macro_times_verbose
         var stopComponentTimer = Context.timer(builder.fullPath);
         #end
@@ -226,6 +230,9 @@ class Macros {
 
         for (f in builder.getFieldsWithMeta("event")) {
             f.remove();
+            if (builder.hasFieldSuper(f.name)) {
+                continue;
+            }
             var eventExpr = f.getMetaValueExpr("event");
             var varName = '_internal__${f.name}';
             builder.addVar(varName, f.type, null, null, [{name: ":noCompletion", pos: Context.currentPos()}]);
