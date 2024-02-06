@@ -56,8 +56,8 @@ class Style {
     /** The amount of right offset to apply to the calculated position **/          @:optional public var marginRight:Null<Float>;
     /** The amount of bottom offset to apply to the calculated position **/         @:optional public var marginBottom:Null<Float>;
 
-    /** The vertical spacing between the component's children in pixels**/          @:optional public var horizontalSpacing:Null<Float>;
-    /** The horizontal spacing between the component's children in pixels**/        @:optional public var verticalSpacing:Null<Float>;
+    /** The horizontal spacing between the component's children in pixels**/        @:optional public var horizontalSpacing:Null<Float>;
+    /** The vertical spacing between the component's children in pixels**/          @:optional public var verticalSpacing:Null<Float>;
 
     /** The color of the text **/                                                   @:optional public var color:Null<Int>;
 
@@ -181,6 +181,8 @@ class Style {
         return 0;
     }    
     
+    @:optional public var customDirectives:Map<String, Directive> = null;
+
     public function mergeDirectives(map:Map<String, Directive>) {
         for (key in map.keys()) {
             var v = map.get(key);
@@ -307,6 +309,20 @@ class Style {
                 case "border-bottom-color":
                     borderBottomColor = ValueTools.int(v.value);
 
+                case "border-size" | "border-width":
+                    if (v.value == VNone) {
+                        borderSize = 0;
+                        borderTopSize = 0;
+                        borderLeftSize = 0;
+                        borderBottomSize = 0;
+                        borderRightSize = 0;
+                    } else {
+                        borderSize = ValueTools.calcDimension(v.value);
+                        borderTopSize = ValueTools.calcDimension(v.value);
+                        borderLeftSize = ValueTools.calcDimension(v.value);
+                        borderBottomSize = ValueTools.calcDimension(v.value);
+                        borderRightSize = ValueTools.calcDimension(v.value);
+                    }
                 case "border-top-size" | "border-top-width":
                     if (v.value == VNone) {
                         borderTopSize = 0;
@@ -487,6 +503,21 @@ class Style {
                     includeInLayout = ValueTools.bool(v.value);
                 case "justify-content":
                     justifyContent = ValueTools.string(v.value);
+                case _:
+                    var use = DirectiveHandler.hasDirectiveHandler(v.directive);
+                    #if haxeui_custom_directives_relaxed // means we dont require a handler, so the backend can just do "anything" with them
+                        use = true;
+                    #end
+                    if (use) {
+                        if (customDirectives == null) {
+                            customDirectives = new Map<String, Directive>();
+                        }
+                        if (v.value == null || v.value == VNone) {
+                            customDirectives.remove(v.directive);
+                        } else {
+                            customDirectives.set(v.directive, v);
+                        }
+                    }
             }
         }
     }
@@ -642,6 +673,20 @@ class Style {
         if (s.layout != null) layout = s.layout;
         if (s.includeInLayout != null) includeInLayout = s.includeInLayout;
         if (s.justifyContent != null) justifyContent = s.justifyContent;
+
+        if (s.customDirectives != null) {
+            if (this.customDirectives == null) {
+                this.customDirectives = new Map<String, Directive>();
+            }
+            for (directive in s.customDirectives.keys()) {
+                var v = s.customDirectives.get(directive);
+                if (v.value == null || v.value == VNone) {
+                    this.customDirectives.remove(directive);
+                } else {
+                    this.customDirectives.set(directive, v);
+                }
+            }
+        }
     }
 
     public function equalTo(s:Style):Bool {
@@ -774,6 +819,18 @@ class Style {
         if (s.includeInLayout != includeInLayout) return false;
         if (s.justifyContent != justifyContent) return false;
         
+        if (s.customDirectives != null && this.customDirectives != null) { 
+            for (directive in s.customDirectives.keys()) {
+                if (!this.customDirectives.exists(directive)) {
+                    return false;
+                }
+            }
+            for (directive in this.customDirectives.keys()) {
+                if (!s.customDirectives.exists(directive)) {
+                    return false;
+                }
+            }
+        }
         return true;
     }
 

@@ -388,15 +388,20 @@ private class TextBehaviour extends DataBehaviour {
             itemRenderer.data = data;
         } else {
             var label:Label = _component.findComponent(Label, false);
-            if (label == null) {
-                label = new Label();
-                label.id = "button-label";
-                label.scriptAccess = false;
-                _component.addComponent(label);
-                _component.invalidateComponentStyle(true);
+            if (_value == null || _value.isNull) {
+                if (label != null) {
+                    _component.removeComponent(label);
+                }
+            } else {
+                if (label == null) {
+                    label = new Label();
+                    label.id = "button-label";
+                    label.scriptAccess = false;
+                    _component.addComponent(label);
+                    _component.invalidateComponentStyle(true);
+                }
+                label.text = _value;
             }
-
-            label.text = _value;
         }
     }
 }
@@ -662,7 +667,20 @@ class ButtonEvents extends haxe.ui.events.Events {
     private function onActionStart(event:ActionEvent) {
         switch (event.action) {
             case ActionType.PRESS | ActionType.CONFIRM:
+                if (_button.repeater == true) {
+                    if (_repeatInterval == 0) {
+                        _repeatInterval = (_button.easeInRepeater) ? _button.repeatInterval * 2 : _button.repeatInterval;
+                    }
+                    _button.actionRepeatInterval = _repeatInterval;
+                    event.repeater = true;
+                }
                 press();
+                if (_button.repeater == true) {
+                    _button.dispatch(new MouseEvent(MouseEvent.CLICK));
+                    if ( _repeatInterval > _button.repeatInterval) {
+                        _repeatInterval = Std.int(_repeatInterval - (_repeatInterval - _button.repeatInterval) / 2);
+                    }
+                }
             case _:    
         }
     }
@@ -671,6 +689,7 @@ class ButtonEvents extends haxe.ui.events.Events {
         switch (event.action) {
             case ActionType.PRESS | ActionType.CONFIRM:
                 release();
+                _repeatInterval = 0;
             case _:    
         }
     }
@@ -705,11 +724,11 @@ class ButtonBuilder extends CompositeBuilder {
     public override function applyStyle(style:Style) {
         super.applyStyle(style);
         
-        haxe.ui.macros.ComponentMacros.cascacdeStylesTo("button-label", [
+        haxe.ui.macros.ComponentMacros.cascadeStylesTo("button-label", [
             color, fontName, fontSize, cursor, textAlign, fontBold, fontUnderline, fontItalic
         ], false);
-        haxe.ui.macros.ComponentMacros.cascacdeStylesTo("button-icon", [cursor], false);
-        haxe.ui.macros.ComponentMacros.cascacdeStylesToList(Label, [
+        haxe.ui.macros.ComponentMacros.cascadeStylesTo("button-icon", [cursor], false);
+        haxe.ui.macros.ComponentMacros.cascadeStylesToList(Label, [
             color, fontName, fontSize, cursor, textAlign, fontBold, fontUnderline, fontItalic
         ]);
         
@@ -756,6 +775,19 @@ class ButtonGroups { // singleton
 
     public function get(name:String):Array<Button> {
         return _groups.get(name);
+    }
+
+    public function getSelected(name:String):Button {
+        var list = get(name);
+        if (list == null) {
+            return null;
+        }
+        for (button in list) {
+            if (button.selected) {
+                return button;
+            }
+        }
+        return null;
     }
 
     public function set(name:String, buttons:Array<Button>) {

@@ -10,6 +10,7 @@ import haxe.ui.layouts.DefaultLayout;
 import haxe.ui.layouts.DelegateLayout;
 import haxe.ui.layouts.Layout;
 import haxe.ui.locale.LocaleManager;
+import haxe.ui.styles.DirectiveHandler;
 import haxe.ui.styles.Parser;
 import haxe.ui.styles.Style;
 import haxe.ui.styles.StyleSheet;
@@ -530,6 +531,10 @@ class Component extends ComponentImpl
      * is undefined behaviour, and could result in a null pointer exception/`x` is null exceptions.
      */
     public function disposeComponent() {
+        if (this._isDisposed) {
+            return;
+        }
+
         this._isDisposed = true;
         this.removeAllComponents(true);
         this.destroyComponent();
@@ -552,6 +557,7 @@ class Component extends ComponentImpl
             _layout = null;
         }
         if (_internalEvents != null) {
+            _internalEvents.onDispose();
             @:privateAccess _internalEvents._target = null;
             _internalEvents = null;
         }
@@ -668,6 +674,7 @@ class Component extends ComponentImpl
             _compositeBuilder.destroy();
         }
         LocaleManager.instance.unregisterComponent(this);
+        handleDestroy();
         onDestroy();
     }
 
@@ -863,6 +870,20 @@ class Component extends ComponentImpl
             }
         }
         return cast match;
+    }
+
+    /**
+      Whether or not a point is inside this components bounds
+ 
+      *Note*: `left` and `top` must be stage (screen) co-ords
+     **/
+     @:dox(group = "Size related properties and methods")
+    public override function hitTest(left:Null<Float>, top:Null<Float>, allowZeroSized:Bool = false):Bool { // co-ords must be stage
+        if (hidden) {
+            return false;
+        }
+
+        return super.hitTest(left, top, allowZeroSized);
     }
 
      /**
@@ -1633,17 +1654,20 @@ class Component extends ComponentImpl
     /** The size of the border, in pixels **/                                       @:style                 public var borderSize:Null<Float>;
     /** The amount of rounding to apply to the border **/                           @:style                 public var borderRadius:Null<Float>;
 
-    /** The gap between the component and its children, on all sides **/                  @:style(layout)         public var padding:Null<Float>;
-    /** The gap between the component and its children, on the top **/                  @:style(layout)         public var paddingLeft:Null<Float>;
-    /** The gap between the component and its children, on the left side **/            @:style(layout)         public var paddingRight:Null<Float>;
-    /** The gap between the component and its children, on the right side **/           @:style(layout)         public var paddingTop:Null<Float>;
-    /** The gap between the component and its children, on the bottom **/               @:style(layout)         public var paddingBottom:Null<Float>;
+    /** The gap between the component and its children, on all sides **/            @:style(layout)         public var padding:Null<Float>;
+    /** The gap between the component and its children, on the top **/              @:style(layout)         public var paddingLeft:Null<Float>;
+    /** The gap between the component and its children, on the left side **/        @:style(layout)         public var paddingRight:Null<Float>;
+    /** The gap between the component and its children, on the right side **/       @:style(layout)         public var paddingTop:Null<Float>;
+    /** The gap between the component and its children, on the bottom **/           @:style(layout)         public var paddingBottom:Null<Float>;
 
-    /** The amount of left offsetting to apply to the calculated position **/        @:style                 public var marginLeft:Null<Float>;
-    /** The amount of right offsetting to apply to the calculated position**/        @:style                 public var marginRight:Null<Float>;
-    /** The amount of top offsetting to apply to the calculated position **/         @:style                 public var marginTop:Null<Float>;
-    /** The amount of bottom offsetting to apply to the calculated position **/      @:style                 public var marginBottom:Null<Float>;
-    /** Whether the children are clipped (cut) to the the component boundings **/    @:style                 public var clip:Null<Bool>;
+    /** The horizontal spacing between the component's children in pixels **/       @:style(layout)         public var horizontalSpacing:Null<Float>;
+    /** The vertical spacing between the component's children in pixels **/         @:style(layout)         public var verticalSpacing:Null<Float>;
+
+    /** The amount of left offsetting to apply to the calculated position **/       @:style                 public var marginLeft:Null<Float>;
+    /** The amount of right offsetting to apply to the calculated position**/       @:style                 public var marginRight:Null<Float>;
+    /** The amount of top offsetting to apply to the calculated position **/        @:style                 public var marginTop:Null<Float>;
+    /** The amount of bottom offsetting to apply to the calculated position **/     @:style                 public var marginBottom:Null<Float>;
+    /** Whether the children are clipped (cut) to the the component boundings **/   @:style                 public var clip:Null<Bool>;
 
     /** A value between 0 and 1, deciding the transparency of this object **/       @:style                 public var opacity:Null<Float>;
 
@@ -2118,6 +2142,17 @@ class Component extends ComponentImpl
         
         if (style.includeInLayout != null) {
             this.includeInLayout = style.includeInLayout;
+        }
+
+        if (style.customDirectives != null) {
+            for (directive in style.customDirectives.keys()) {
+                if (DirectiveHandler.hasDirectiveHandler(directive)) {
+                    var handler = DirectiveHandler.getDirectiveHandler(directive);
+                    if (handler != null) {
+                        handler.apply(this, style.customDirectives.get(directive));
+                    }
+                }
+            }
         }
 
         if (_compositeBuilder != null) {

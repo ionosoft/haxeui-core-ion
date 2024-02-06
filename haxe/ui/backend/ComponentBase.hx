@@ -118,9 +118,39 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
  
          Returns `null` if this component hasn't been added yet, or just doesn't have a parent.
      **/
+    private var _parentComponent:Component = null;
     @:dox(group = "Display tree related properties and methods")
-    public var parentComponent:Component = null;
+    public var parentComponent(get, set):Component;
+    @:noCompletion
+    private function get_parentComponent():Component {
+        return _parentComponent;
+    }
+    @:noCompletion
+    private function set_parentComponent(value:Component):Component {
+        _parentComponent = value;
+        if (value != null) {
+            onParentComponentSet();
+        }
+        return value;
+    }
  
+
+    private function onParentComponentSet() {
+
+    }
+
+    public function containsChildComponent(child:Component, recursive:Bool = false):Bool {
+        var contains = (_children != null && _children.indexOf(child) != -1);
+        if (recursive && !contains && _children != null) {
+            for (c in _children) {
+                contains = c.containsChildComponent(child, recursive);
+                if (contains) {
+                    break;
+                }
+            }
+        }
+        return contains;
+    }
 
     @:noCompletion private var _children:Array<Component>;
      /**
@@ -319,6 +349,7 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         if (__events.add(type, listener, priority) == true) {
             mapEvent(type, _onMappedEvent);
         }
+        checkWatchForMoveEvents();
     }
 
     /**
@@ -345,6 +376,7 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
             if (__events.remove(type, listener) == true) {
                 unmapEvent(type, _onMappedEvent);
             }
+            checkWatchForMoveEvents();
         }
     }
 
@@ -397,6 +429,43 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         }
     }
     
+    @:noCompletion 
+    private function checkWatchForMoveEvents() {
+        if (hasEvent(MouseEvent.MOUSE_OVER) || hasEvent(MouseEvent.MOUSE_OUT)) {
+            if (!hasEvent(UIEvent.MOVE, _onMoveInternal)) {
+                registerEvent(UIEvent.MOVE, _onMoveInternal);
+            }
+        }
+    }
+
+    @:noCompletion 
+    private function _onMoveInternal(_) {
+        checkComponentBounds();
+    }
+
+    @:noCompletion 
+    private function checkComponentBounds(checkNextFrame:Bool = true) {
+        // is it valid to assume it must have :hover?
+        var hasHover = cast(this, Component).hasClass(":hover"); // TODO: might want to move "hasClass" et al to this class to avoid cast
+        if (!hasHover && screenBounds.containsPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
+            var mouseEvent = new MouseEvent(MouseEvent.MOUSE_OVER);
+            mouseEvent.screenX = Screen.instance.currentMouseX;
+            mouseEvent.screenY = Screen.instance.currentMouseY;
+            dispatch(mouseEvent);
+        } else if (hasHover && !screenBounds.containsPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
+            var mouseEvent = new MouseEvent(MouseEvent.MOUSE_OUT);
+            mouseEvent.screenX = Screen.instance.currentMouseX;
+            mouseEvent.screenY = Screen.instance.currentMouseY;
+            dispatch(mouseEvent);
+        }
+
+        if (checkNextFrame) { // find any stragglers
+            Toolkit.callLater(function() {
+                checkComponentBounds(false);
+            });
+        }
+    }
+
     @:noCompletion 
     private function _onMappedEvent<T:UIEvent>(event:T) {
         dispatch(event);
@@ -978,8 +1047,9 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
          top *= Toolkit.scale;
  
          var b:Bool = false;
-         var sx:Float = screenLeft;
-         var sy:Float = screenTop;
+         var bounds = screenBounds;
+         var sx:Float = bounds.left;
+         var sy:Float = bounds.top;
  
          var cx:Float = 0;
          if (componentWidth != null) {
@@ -1095,48 +1165,61 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
      @:dox(group = "Position related properties and methods")
      public var screenLeft(get, null):Float;
      private function get_screenLeft():Float {
-         var c = this;
-         var xpos:Float = 0;
-         while (c != null) {
-             var l = c.left;
-             if (c.parentComponent != null) {
-                 l *= Toolkit.scale;
-             }
-             xpos += l;
- 
-             if (c.componentClipRect != null) {
-                 xpos -= c.componentClipRect.left * Toolkit.scaleX;
-             }
- 
-             c = c.parentComponent;
-         }
-         return xpos;
+         return screenBounds.left;
      }
  
+     public var screenRight(get, null):Float;
+     private function get_screenRight():Float {
+        return screenLeft + width;
+     }
+
      /**
       * The **on-screen** position of this component on the vertical, y-axis. 
       */
      @:dox(group = "Position related properties and methods")
      public var screenTop(get, null):Float;
      private function get_screenTop():Float {
-         var c = this;
-         var ypos:Float = 0;
-         while (c != null) {
-             var t = c.top;
-             if (c.parentComponent != null) {
-                 t *= Toolkit.scale;
-             }
-             ypos += t;
- 
-             if (c.componentClipRect != null) {
-                 ypos -= c.componentClipRect.top * Toolkit.scaleY;
-             }
- 
-             c = c.parentComponent;
-         }
-         return ypos;
+         return screenBounds.top;
      }
  
+     public var screenBottom(get, null):Float;
+     private function get_screenBottom():Float { 
+        return screenTop + height;
+     }
+
+     private var _screenBounds:Rectangle = null; // we'll use the same rect over and over as to not create new objects all the time
+     public var screenBounds(get, null):Rectangle;
+     private function get_screenBounds():Rectangle {
+        if (_screenBounds == null) { 
+            _screenBounds = new Rectangle(); 
+        }
+
+        var c = this;
+        var xpos:Float = 0;
+        var ypos:Float = 0;
+        while (c != null) {
+            var l = c.left;
+            var t = c.top;
+            if (c.parentComponent != null) {
+                l *= Toolkit.scale;
+                t *= Toolkit.scale;
+            }
+            xpos += l;
+            ypos += t;
+
+            if (c.componentClipRect != null) {
+                xpos -= c.componentClipRect.left * Toolkit.scaleX;
+                ypos -= c.componentClipRect.top * Toolkit.scaleY;
+            }
+
+            c = c.parentComponent;
+        }
+
+        _screenBounds.set(xpos, ypos, width, height);
+
+        return _screenBounds;
+     }
+
      //***********************************************************************************************************
      // Clip rect
      //***********************************************************************************************************
@@ -1521,6 +1604,10 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
     //***********************************************************************************************************
     @:dox(group = "Backend")
     private function handleCreate(native:Bool) {
+    }
+
+    @:dox(group = "Backend")
+    private function handleDestroy() {
     }
 
     @:dox(group = "Backend")

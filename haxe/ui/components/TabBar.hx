@@ -442,6 +442,7 @@ private class Builder extends CompositeBuilder {
 
     }
 
+    private var _childToButtonMap:Map<Component, TabBarButton> = new Map<Component, TabBarButton>();
     private function createTabBarButton(child:Component):TabBarButton {
         var button = new TabBarButton();
 
@@ -471,7 +472,19 @@ private class Builder extends CompositeBuilder {
             button.styleNames = child.styleNames;
         }
 
+        _childToButtonMap.set(child, button);
+        child.registerEvent(UIEvent.PROPERTY_CHANGE, onButtonPropertyChange);
+
         return button;
+    }
+
+    private function onButtonPropertyChange(event:UIEvent) {
+        if (event.data == "text") {
+            var button = _childToButtonMap.get(event.target);
+            if (button != null) {
+                button.text = event.target.text;
+            }
+        }
     }
 
     private override function get_numComponents():Null<Int> {
@@ -633,7 +646,7 @@ private class Builder extends CompositeBuilder {
     public override function applyStyle(style:Style) {
         super.applyStyle(style);
         
-        haxe.ui.macros.ComponentMacros.cascacdeStylesToList(Button, [
+        haxe.ui.macros.ComponentMacros.cascadeStylesToList(Button, [
             color, fontName, fontSize, textAlign, fontBold, fontUnderline, fontItalic
         ]);
     }

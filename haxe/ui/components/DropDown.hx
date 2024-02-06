@@ -39,6 +39,8 @@ class DropDown extends Button implements IDataComponent {
     @:clonable @:behaviour(DefaultBehaviour)                        public var dropdownWidth:Null<Float>;
     @:clonable @:behaviour(DefaultBehaviour)                        public var dropdownHeight:Null<Float>;
     @:clonable @:behaviour(DefaultBehaviour)                        public var dropdownSize:Null<Int>;
+    @:clonable @:behaviour(DefaultBehaviour)                        public var dropdownHorizontalPosition:String;
+    @:clonable @:behaviour(DefaultBehaviour)                        public var dropdownVerticalPosition:String;
     @:clonable @:behaviour(SelectedIndexBehaviour, -1)              public var selectedIndex:Int;
     @:clonable @:behaviour(SelectedItemBehaviour)                   public var selectedItem:Dynamic;
     @:clonable @:behaviour(DefaultBehaviour, false)                 public var searchable:Bool;
@@ -781,16 +783,23 @@ class DropDownEvents extends ButtonEvents {
 
             var popupToRight = false;
             var popupFromBottom = false;
-            if (_wrapper.screenLeft + _wrapper.actualComponentWidth > Screen.instance.actualWidth) {
+            if (_dropdown.dropdownHorizontalPosition == "right" || _wrapper.screenLeft + _wrapper.actualComponentWidth > Screen.instance.actualWidth) {
                 var left = _wrapper.screenLeft - _wrapper.actualComponentWidth + _dropdown.actualComponentWidth;
                 _wrapper.left = left >= 0 ? left : (Screen.instance.actualWidth / 2) - (_wrapper.actualComponentWidth / 2);
                 popupToRight = true;
             }
             _wrapper.removeClass("popup-from-bottom");
-            if (_wrapper.screenTop + _wrapper.actualComponentHeight > Screen.instance.actualHeight) {
-                _wrapper.top = (_dropdown.screenTop - _wrapper.actualComponentHeight) + Toolkit.scaleY;
-                popupFromBottom = true;
+            if (_dropdown.dropdownVerticalPosition == "bottom" || _wrapper.screenTop + _wrapper.actualComponentHeight > Screen.instance.actualHeight) {
                 _wrapper.addClass("popup-from-bottom");
+                _wrapper.top = (_dropdown.screenTop - _wrapper.actualComponentHeight) + Toolkit.scaleY;
+                _wrapper.syncComponentValidation();
+                _wrapper.validateNow();
+                var marginTop = 0.0;
+                if (_wrapper.style != null && _wrapper.style.marginTop != null) {
+                    marginTop = _wrapper.style.marginTop;
+                }
+                _wrapper.top += marginTop;
+                popupFromBottom = true;
             }
             
             var cx = _wrapper.width - _dropdown.width;
@@ -812,7 +821,9 @@ class DropDownEvents extends ButtonEvents {
                     filler.top = 0;
                 }
                 
-                filler.hidden = false;
+                if (filler.style != null && (filler.style.hidden == null || filler.style.hidden == false)) {
+                    filler.hidden = false;
+                }
             } else if (filler != null) {
                 filler.hidden = true;
                 _wrapper.removeClass("dropdown-popup-expanded");

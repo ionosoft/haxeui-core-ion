@@ -38,13 +38,15 @@ class Macros {
         #end
 
         for (f in builder.fields) {
-            if (f.access.indexOf(AInline) != -1 && f.access.indexOf(AStatic) != -1) {
+            if ((f.access.indexOf(AInline) != -1 || f.access.indexOf(AFinal) != -1) && f.access.indexOf(AStatic) != -1) {
                 switch (f.kind) {
                     case FVar(t, e):
                         var eventName = ExprTools.toString(e);
                         eventName = StringTools.replace(eventName, "\"", "");
                         eventName = StringTools.replace(eventName, "'", "");
                         eventName = eventName.toLowerCase();
+                        eventName = StringTools.replace(eventName, "eventtype.name(", "");
+                        eventName = StringTools.replace(eventName, ")", "");
                         EventInfo.nameToType.set(eventName, builder.fullPath);
                         EventInfo.nameToType.set("on" + eventName, builder.fullPath);
                     case _:
@@ -280,6 +282,7 @@ class Macros {
                 return $p{["style", f.name]};
             });
             getter.addMeta(":style");
+            getter.addMeta(":keep");
             //getter.addMeta(":clonable");
             getter.addMeta(":dox", [macro group = "Style properties"]);
 
@@ -442,7 +445,7 @@ class Macros {
             if (useSelf == false) {
                 access.push(AOverride);
             }
-            cloneFn = builder.addFunction("cloneComponent", builder.path, access);
+            cloneFn = builder.addFunction("cloneComponent", builder.complexType, access);
         }
 
         var cloneLineExpr = null;
@@ -501,11 +504,11 @@ class Macros {
             if (constructorArgExprs == null) {
                 builder.addFunction("self", macro {
                     return new $typePath();
-                }, builder.path, access);
+                }, builder.complexType, access);
             } else {
                 builder.addFunction("self", macro {
                     return new $typePath($a{constructorArgExprs});
-                }, builder.path, access);
+                }, builder.complexType, access);
             }
         }
 

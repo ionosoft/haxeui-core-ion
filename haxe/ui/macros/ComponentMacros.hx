@@ -88,7 +88,7 @@ class ComponentMacros {
         return macro new $t();
     }
 
-    macro public static function cascacdeStylesTo(id:Expr, styleProperties:Expr = null, recursiveFind:Null<Bool> = null):Expr {
+    macro public static function cascadeStylesTo(id:Expr, styleProperties:Expr = null, recursiveFind:Null<Bool> = null):Expr {
         if (styleProperties == null) {
             return macro null;
         }
@@ -127,7 +127,7 @@ class ComponentMacros {
         return builder.expr;
     }
     
-    macro public static function cascacdeStylesToList(componentType:Expr, styleProperties:Expr = null):Expr {
+    macro public static function cascadeStylesToList(componentType:Expr, styleProperties:Expr = null):Expr {
         if (styleProperties == null) {
             return macro null;
         }
@@ -356,10 +356,12 @@ class ComponentMacros {
                 buildDataSourceCode(builder, c, 'ds_root', "this");
             }
 
+            buildData.scripts = [];
             assignComponentProperties(builder, c, rootVarName, buildData);
             if (c.layout != null) {
                 buildLayoutCode(builder, c, rootVarName);
             }
+            buildScriptHandlers(builder, buildData.namedComponents, buildData.scripts);
         }
         
         if (classBuilder == null) {
@@ -1101,9 +1103,11 @@ class ComponentMacros {
                         propType = propInfo.propertyType;
                     }
                     //var propExpr = macro $v{TypeConverter.convertTo(TypeConverter.convertFrom(propValue), propType)};
-                    var propExpr = macro $v{TypeConverter.convertFrom(propValue)};
+                    var pos = Context.currentPos();
+                    var propExpr = macro @:pos(pos) $v{TypeConverter.convertFrom(propValue)};
                     builder.add(macro $i{varName}.$propName = $propExpr);
                 } else {
+                    
                     var propExpr = macro $v{TypeConverter.convertFrom(propValue)};
                     builder.add(macro $i{varName}.$propName = $propExpr);
                 }

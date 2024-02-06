@@ -102,6 +102,10 @@ class MenuEvents extends haxe.ui.events.Events {
         unregisterEvent(UIEvent.SHOWN, onShown);
     }
 
+    public override function onDispose() {
+        removeScreenMouseDown();
+    }
+
     private var _over:Bool = false;
     private function onMouseOver(event:MouseEvent) {
         _over = true;
@@ -197,14 +201,28 @@ class MenuEvents extends haxe.ui.events.Events {
         var left = source.screenLeft + source.actualComponentWidth + componentOffset.x;
         var top = source.screenTop;
         Screen.instance.addComponent(subMenu);
-        subMenu.syncComponentValidation();
+        subMenu.validateNow();
 
         if (left + subMenu.actualComponentWidth > Screen.instance.width) {
             left = source.screenLeft - subMenu.actualComponentWidth;
         }
 
-        subMenu.left = left;
-        subMenu.top = top;
+        var offsetX:Float = 0;
+        var offsetY:Float = 0;
+        if (subMenu.style != null) {
+            if (subMenu.style.paddingLeft > 1) {
+                offsetX = subMenu.style.paddingLeft - 1;
+            } else {
+                offsetX = 0;
+            }
+            if (subMenu.style.paddingTop > 1) {
+                offsetY = subMenu.style.paddingTop - 1;
+            } else {
+                offsetY = 1;
+            }
+        }
+        subMenu.left = left + offsetX;
+        subMenu.top = top - offsetY;
 
         currentSubMenu = subMenu;
     }
@@ -229,6 +247,10 @@ class MenuEvents extends haxe.ui.events.Events {
     
     private function hideCurrentSubMenu() {
         if (currentSubMenu == null) {
+            return;
+        }
+
+        if (currentSubMenu._isDisposed) { // sub menu could have already been disposed of
             return;
         }
 
