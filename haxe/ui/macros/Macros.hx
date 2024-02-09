@@ -29,6 +29,9 @@ class Macros {
 
     macro static function buildEvent():Array<Field> {
         var builder = new ClassBuilder(Context.getBuildFields(), Context.getLocalType(), Context.currentPos());
+        #if haxeui_expose_all
+        builder.addMeta(":expose");
+        #end
 
         #if macro_times_verbose
         var stopComponentTimer = Context.timer(builder.fullPath);
@@ -412,12 +415,24 @@ class Macros {
                         case [param1]:
                             buildPropertyBinding(builder, f, param1, "value"); // input component that has value
                         case [component, event]: // two params, lets assume event binding
+                            var componentString = ExprTools.toString(component);
                             builder.ctor.add(macro @:pos(component.pos) {
-                                var c:haxe.ui.core.Component = ${component};
-                                if (c != null) {
-                                    c.registerEvent($event, $i{f.name});
+                                if ($v{componentString} == "controller") { // TODO: arguably a hack as its sepcific to MVC, contoller might be null by the time we are linking things
+                                    haxe.ui.Toolkit.callLater(function() {
+                                        var c:haxe.ui.core.IEventDispatcher<haxe.ui.events.UIEvent> = cast ${component};
+                                        if (c != null) {
+                                            c.registerEvent($event, $i{f.name});
+                                        } else {
+                                            trace("WARNING: could not find event dispatcher to register event (" + $v{ExprTools.toString(component)} + ")");
+                                        }
+                                    });
                                 } else {
-                                    trace("WARNING: could not find component to register event (" + $v{ExprTools.toString(component)} + ")");
+                                    var c:haxe.ui.core.IEventDispatcher<haxe.ui.events.UIEvent> = cast ${component};
+                                    if (c != null) {
+                                        c.registerEvent($event, $i{f.name});
+                                    } else {
+                                        trace("WARNING: could not find event dispatcher to register event (" + $v{ExprTools.toString(component)} + ")");
+                                    }
                                 }
                             }, End);
                         default:
@@ -522,6 +537,10 @@ class Macros {
     public static var _cachedFields:Map<String, Array<Field>> = new Map<String, Array<Field>>();
     #end
     static function buildBehaviours():Array<Field> {
+        if (Context.getLocalClass().get().isExtern) {
+            return null;
+        }
+
         var builder = new ClassBuilder(haxe.macro.Context.getBuildFields(), Context.getLocalType(), Context.currentPos());
         #if macro_times_verbose
         var stopComponentTimer = Context.timer(builder.fullPath);

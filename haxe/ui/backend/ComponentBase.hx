@@ -7,6 +7,7 @@ import haxe.ui.behaviours.DefaultBehaviour;
 import haxe.ui.behaviours.ValueBehaviour;
 import haxe.ui.core.Component;
 import haxe.ui.core.IClonable;
+import haxe.ui.core.IEventDispatcher;
 import haxe.ui.core.ImageDisplay;
 import haxe.ui.core.Screen;
 import haxe.ui.core.TextDisplay;
@@ -31,7 +32,7 @@ import haxe.ui.validation.ValidationManager;
 @:autoBuild(haxe.ui.macros.Macros.buildBehaviours())
 @:build(haxe.ui.macros.Macros.build())
 @:autoBuild(haxe.ui.macros.Macros.build())
-class ComponentBase extends ComponentSurface implements IClonable<ComponentBase> {
+class ComponentBase extends ComponentSurface implements IClonable<ComponentBase> implements IEventDispatcher<UIEvent> {
     /**
      * Creates a new `ComponentContainer`.
      */
@@ -399,7 +400,10 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
      Dispatch a certain `UIEvent`
     **/
     @:dox(group = "Event related properties and methods")
-    public function dispatch<T:UIEvent>(event:T) {
+    public function dispatch<T:UIEvent>(event:T, target:Component = null) {
+        if (_pausedEvents != null && _pausedEvents.indexOf(event.type) != -1) {
+            return;
+        }
         if (event != null) {
             if (__events != null) {
                 __events.invoke(event.type, event, cast(this, Component));  // TODO: avoid cast
@@ -415,6 +419,12 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         dispatch(event);
         for (child in childComponents) {
             child.dispatchRecursively(event);
+        }
+    }
+
+    public function removeAllListeners() {
+        if (__events != null) {
+            __events.removeAll();
         }
     }
 
@@ -445,6 +455,9 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
 
     @:noCompletion 
     private function checkComponentBounds(checkNextFrame:Bool = true) {
+        if (Screen.instance.currentMouseX == null || Screen.instance.currentMouseY == null) {
+            return;
+        }
         // is it valid to assume it must have :hover?
         var hasHover = cast(this, Component).hasClass(":hover"); // TODO: might want to move "hasClass" et al to this class to avoid cast
         if (!hasHover && screenBounds.containsPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
@@ -586,26 +599,13 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         }
     }
 
-    @:noCompletion private var _pausedEvents:Map<String, Array<UIEvent->Void>> = null;
+    @:noCompletion private var _pausedEvents:Array<String> = null;
     public function pauseEvent(type:String, recursive:Bool = false) {
-        if (__events == null || __events.contains(type) == false) {
-            return;
-        }
-        
         if (_pausedEvents == null) {
-            _pausedEvents = new Map<String, Array<UIEvent->Void>>();
+            _pausedEvents = [];
         }
-        
-        var pausedList = _pausedEvents.get(type);
-        if (pausedList == null) {
-            pausedList = new Array<UIEvent->Void>();
-            _pausedEvents.set(type, pausedList);
-        }
-        
-        var listeners = __events.listeners(type).copy();
-        for (l in listeners) {
-            pausedList.push(l);
-            unregisterEvent(type, l);
+        if (_pausedEvents.indexOf(type) == -1) {
+            _pausedEvents.push(type);
         }
         
         if (recursive == true) {
@@ -615,30 +615,20 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         }
     }
     
-    public function resumeEvent(type:String, recursive:Bool = false) {
-        if (__events == null) {
-            return;
-        }
-        
-        if (_pausedEvents == null) {
-            return;
-        }
-        
-        if (_pausedEvents.exists(type) == false) {
-            return;
-        }
-        
-        //Toolkit.callLater(function() {
-            var pausedList = _pausedEvents.get(type);
-            for (l in pausedList) {
-                registerEvent(type, l);
+    public function resumeEvent(type:String, nextFrame:Bool = false, recursive:Bool = false) {
+        if (nextFrame) {
+            Toolkit.callLater(function() {
+                resumeEvent(type, false, recursive);
+            });
+        } else {
+            if (_pausedEvents != null && _pausedEvents.indexOf(type) != -1) {
+                _pausedEvents.remove(type);
             }
-            _pausedEvents.remove(type);
-        //});
-        
-        if (recursive == true) {
-            for (c in childComponents) {
-                c.resumeEvent(type, recursive);
+
+            if (recursive == true) {
+                for (c in childComponents) {
+                    c.resumeEvent(type, false, recursive);
+                }
             }
         }
     }
