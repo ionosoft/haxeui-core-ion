@@ -24,6 +24,14 @@ class DragManager {
     // Instance
     //****************************************************************************************************
 
+    /**
+     * Whether a component is currently being dragged
+     */
+    public var isDragging(get, never):Bool;
+    function get_isDragging():Bool {
+        return _currentComponent != null;
+    }
+
     private var _dragComponents:Map<Component, DragOptions>;
     private var _mouseTargetToDragTarget:Map<Component, Component>;
 
@@ -100,6 +108,9 @@ class DragManager {
             dragOptions.mouseTarget.unregisterEvent(MouseEvent.MOUSE_DOWN, onMouseDown);
             // remove mouseTarget from map
             _mouseTargetToDragTarget.remove(dragOptions.mouseTarget);
+            if (dragOptions.draggableStyleName != null) {
+                dragOptions.mouseTarget.removeClass(dragOptions.draggableStyleName);
+            }
         }
         Screen.instance.unregisterEvent(MouseEvent.MOUSE_MOVE, onScreenCheckForDrag);
         Screen.instance.unregisterEvent(MouseEvent.MOUSE_MOVE, onScreenDrag);

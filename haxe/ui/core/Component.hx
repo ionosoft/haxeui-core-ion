@@ -391,7 +391,7 @@ class Component extends ComponentImpl
      * @param child The child component to check against.
      * @return Is the child component a child of this component?
      */
-    public function containsComponent(child:Component):Bool {
+    public override function containsComponent(child:Component):Bool {
         if (child == null) {
             return false;
         }
@@ -1139,11 +1139,11 @@ class Component extends ComponentImpl
             }
 
             onAnimationEnd = function(e) {
+                removeClass("fade-in");
+                onAnimationEnd = prevEnd;
                 if (onEnd != null) {
                     onEnd();
                 }
-                removeClass("fade-in");
-                onAnimationEnd = prevEnd;
             }
         }
         swapClass("fade-in", "fade-out");
@@ -1161,11 +1161,11 @@ class Component extends ComponentImpl
                 if (hide == true) {
                     this.hide();
                 }
+                onAnimationEnd = prevEnd;
+                removeClass("fade-out");
                 if (onEnd != null) {
                     onEnd();
                 }
-                onAnimationEnd = prevEnd;
-                removeClass("fade-out");
             }
         }
         swapClass("fade-out", "fade-in");
@@ -1375,6 +1375,37 @@ class Component extends ComponentImpl
         if (recursive == true) {
             for (child in childComponents) {
                 child.swapClass(classToAdd, classToRemove, invalidate, recursive);
+            }
+        }
+    }
+
+    public function swapClasses(classesToAdd:Array<String>, classesToRemove:Array<String> = null, invalidate:Bool = true, recursive:Bool = false) {
+        var needsInvalidate = false;
+        if (classesToAdd != null) {
+            for (classToAdd in classesToAdd) {
+                if (classToAdd != null && classes.indexOf(classToAdd) == -1) {
+                    classes.push(classToAdd);
+                    needsInvalidate = true;
+                }
+            }
+        }
+
+        if (classesToRemove != null) {
+            for (classToRemove in classesToRemove) {
+                if (classToRemove != null && classes.indexOf(classToRemove) != -1) {
+                    classes.remove(classToRemove);
+                    needsInvalidate = true;
+                }
+            }
+        }
+
+        if (invalidate == true && needsInvalidate == true) {
+            invalidateComponentStyle();
+        }
+
+        if (recursive == true) {
+            for (child in childComponents) {
+                child.swapClasses(classesToAdd, classesToRemove, invalidate, recursive);
             }
         }
     }
@@ -1657,9 +1688,9 @@ class Component extends ComponentImpl
     #if !(haxeui_flixel || haxeui_heaps)
     /** The color of the text **/                                                   @:style                 public var color:Null<Color>;
     #end
-    @:style                 public var backgroundColor:Null<Color>;
-    @:style                 public var backgroundColorEnd:Null<Color>;
-    @:style                 public var backgroundImage:Variant;
+                                                                                    @:style                 public var backgroundColor:Null<Color>;
+                                                                                    @:style                 public var backgroundColorEnd:Null<Color>;
+                                                                                    @:style                 public var backgroundImage:Variant;
     /** The color of the border **/                                                 @:style                 public var borderColor:Null<Color>;
     /** The size of the border, in pixels **/                                       @:style                 public var borderSize:Null<Float>;
     /** The amount of rounding to apply to the border **/                           @:style                 public var borderRadius:Null<Float>;
@@ -2170,20 +2201,21 @@ class Component extends ComponentImpl
         }
     }
 
+    private var recursivePointerEvents:Bool = true;
     private function onPointerEventsMouseOver(e:MouseEvent) {
-        addClass(":hover", true, true);
+        addClass(":hover", true, recursivePointerEvents);
     }
 
     private function onPointerEventsMouseOut(e:MouseEvent) {
-        removeClass(":hover", true, true);
+        removeClass(":hover", true, recursivePointerEvents);
     }
 
     private function onPointerEventsMouseDown(e:MouseEvent) {
-        addClass(":down", true, true);
+        addClass(":down", true, recursivePointerEvents);
     }
 
     private function onPointerEventsMouseUp(e:MouseEvent) {
-        removeClass(":down", true, true);
+        removeClass(":down", true, recursivePointerEvents);
     }
 
     //***********************************************************************************************************

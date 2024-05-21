@@ -139,6 +139,8 @@ class Style {
 
     @:optional public var contentType:String;
     @:optional public var direction:String;
+    @:optional public var scaleMode:String;
+    
 
     /** The width at which the children will be clipped inside a scrollview **/                                @:optional public var contentWidth:Null<Float>;
     /** The width in % unit of the component at which the children will be clipped inside a scrollview **/     @:optional public var contentWidthPercent:Null<Float>;
@@ -160,10 +162,17 @@ class Style {
     /** The type of the border. can be `Compound`, `Full` or `None` **/                                      @:optional public var borderType(get, null):StyleBorderType;
     private function get_borderType():StyleBorderType {
         var t = StyleBorderType.Compound;
-        if (borderLeftSize != null && borderLeftSize > 0 && borderLeftSize == borderRightSize && borderLeftSize == borderBottomSize && borderLeftSize == borderTopSize) { // full border
-            t = StyleBorderType.Full;
-        } else if ((borderLeftSize == null || borderLeftSize <= 0) && (borderRightSize == null || borderRightSize <= 0)  && (borderBottomSize == null || borderRightSize <= 0) && (borderTopSize == null || borderTopSize <= 0)) {
+        var hasLeftBorder = (borderLeftSize != null && borderLeftSize > 0);
+        var hasRightBorder = (borderRightSize != null && borderRightSize > 0);
+        var hasTopBorder = (borderTopSize != null && borderTopSize > 0);
+        var hasBottomBorder = (borderBottomSize != null && borderBottomSize > 0);
+        var borderColoursEqual = (borderLeftColor == borderRightColor && borderLeftColor == borderTopColor && borderLeftColor == borderBottomColor);
+        if (!hasLeftBorder && !hasRightBorder && !hasTopBorder && !hasBottomBorder) {
             t = StyleBorderType.None;
+        } else if (hasLeftBorder && hasRightBorder && hasTopBorder && hasBottomBorder && borderColoursEqual) {
+            borderSize = borderLeftSize;
+            borderColor = borderLeftColor;
+            t = StyleBorderType.Full;
         }
         return t;
     }
@@ -181,6 +190,8 @@ class Style {
         return 0;
     }    
     
+    @:optional public var layoutProperties:Map<String, Any> = null;
+
     @:optional public var customDirectives:Map<String, Directive> = null;
 
     public function mergeDirectives(map:Map<String, Directive>) {
@@ -476,7 +487,13 @@ class Style {
                     contentType = ValueTools.string(v.value);
                 case "direction":
                     direction = ValueTools.string(v.value);
-                    
+
+                case "scale-mode":
+                    if (ValueTools.none(v.value)) {
+                        scaleMode = "none";
+                    } else {
+                        scaleMode = ValueTools.string(v.value);
+                    }    
                 case "content-width":
                     contentWidth = ValueTools.calcDimension(v.value);
                     contentWidthPercent = ValueTools.percent(v.value);
@@ -504,18 +521,26 @@ class Style {
                 case "justify-content":
                     justifyContent = ValueTools.string(v.value);
                 case _:
-                    var use = DirectiveHandler.hasDirectiveHandler(v.directive);
-                    #if haxeui_custom_directives_relaxed // means we dont require a handler, so the backend can just do "anything" with them
-                        use = true;
-                    #end
-                    if (use) {
-                        if (customDirectives == null) {
-                            customDirectives = new Map<String, Directive>();
+                    if (StringTools.startsWith(key, "layout-")) {
+                        var layoutPropName = key.substring("layout-".length);
+                        if (layoutProperties == null) {
+                            layoutProperties = new Map<String, Any>();
                         }
-                        if (v.value == null || v.value == VNone) {
-                            customDirectives.remove(v.directive);
-                        } else {
-                            customDirectives.set(v.directive, v);
+                        layoutProperties.set(layoutPropName, ValueTools.any(v.value));
+                    } else {
+                        var use = DirectiveHandler.hasDirectiveHandler(v.directive);
+                        #if haxeui_custom_directives_relaxed // means we dont require a handler, so the backend can just do "anything" with them
+                            use = true;
+                        #end
+                        if (use) {
+                            if (customDirectives == null) {
+                                customDirectives = new Map<String, Directive>();
+                            }
+                            if (v.value == null || v.value == VNone) {
+                                customDirectives.remove(v.directive);
+                            } else {
+                                customDirectives.set(v.directive, v);
+                            }
                         }
                     }
             }
@@ -658,6 +683,7 @@ class Style {
         if (s.pointerEvents != null) pointerEvents = s.pointerEvents;
         if (s.contentType != null) contentType = s.contentType;
         if (s.direction != null) direction = s.direction;
+        if (s.scaleMode != null) scaleMode = s.scaleMode;
         
         if (s.contentWidth != null) contentWidth = s.contentWidth;
         if (s.contentWidthPercent != null) contentWidthPercent = s.contentWidthPercent;
@@ -673,6 +699,16 @@ class Style {
         if (s.layout != null) layout = s.layout;
         if (s.includeInLayout != null) includeInLayout = s.includeInLayout;
         if (s.justifyContent != null) justifyContent = s.justifyContent;
+
+        if (s.layoutProperties != null) {
+            if (this.layoutProperties == null) {
+                this.layoutProperties = new Map<String, Any>();
+            }
+            for (layoutPropName in s.layoutProperties.keys()) {
+                var v = s.layoutProperties.get(layoutPropName);
+                this.layoutProperties.set(layoutPropName, v);
+            }
+        }
 
         if (s.customDirectives != null) {
             if (this.customDirectives == null) {
@@ -803,6 +839,7 @@ class Style {
         if (s.pointerEvents != pointerEvents) return false;
         if (s.contentType != contentType) return false;
         if (s.direction != direction) return false;
+        if (s.scaleMode != scaleMode) return false;
         
         if (s.contentWidth != contentWidth) return false;
         if (s.contentWidthPercent != contentWidthPercent) return false;
@@ -819,6 +856,19 @@ class Style {
         if (s.includeInLayout != includeInLayout) return false;
         if (s.justifyContent != justifyContent) return false;
         
+        if (s.layoutProperties != null && s.layoutProperties != null) {
+            for (layoutPropName in s.layoutProperties) {
+                if (!this.layoutProperties.exists(layoutPropName)) {
+                    return false;
+                }
+            }
+            for (layoutPropName in this.layoutProperties) {
+                if (!s.layoutProperties.exists(layoutPropName)) {
+                    return false;
+                }
+            }
+        }
+
         if (s.customDirectives != null && this.customDirectives != null) { 
             for (directive in s.customDirectives.keys()) {
                 if (!this.customDirectives.exists(directive)) {

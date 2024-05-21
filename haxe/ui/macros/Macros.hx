@@ -18,6 +18,7 @@ import haxe.ui.macros.helpers.FieldBuilder;
 import haxe.ui.util.EventInfo;
 import haxe.ui.util.RTTI;
 import haxe.ui.util.StringUtil;
+import haxe.ui.util.TypeConverter;
 
 using StringTools;
 
@@ -130,6 +131,21 @@ class Macros {
                     continue;
                 }
                 createDefaultsFn.add(macro addClass($v{n}));
+            }
+        } else {
+            for (key in ModuleMacros.properties.keys()) {
+                if (key.startsWith(propPrefix)) {
+                    var createDefaultsFn = builder.findFunction("createDefaults");
+                    if (createDefaultsFn == null) {
+                        createDefaultsFn = builder.addFunction("createDefaults", macro {
+                            super.createDefaults();
+                        }, null, null, [AOverride, APrivate]);
+                    }
+                    var propName = key.split(".").pop();
+                    var propValue = ModuleMacros.properties.get(key);
+                    var convertedPropValue = TypeConverter.convertFrom(propValue);
+                    createDefaultsFn.add(macro $i{propName} = $v{convertedPropValue});
+                }
             }
         }
 
@@ -267,6 +283,7 @@ class Macros {
 
         for (f in builder.getFieldsWithMeta("style")) {
             f.remove();
+            RTTI.addClassProperty(builder.fullPath, f.name, ComplexTypeTools.toString(f.type));
 
             var defaultValue:Dynamic = null;
             if (f.isNumeric == true) {
@@ -532,10 +549,6 @@ class Macros {
         #end
     }
 
-    #if ((haxe_ver < 4) || haxeui_heaps)
-    // TODO: this is a really ugly haxe3 hack / workaround - once haxe4 stabalises this *MUST* be removed - its likely brittle and ill conceived!
-    public static var _cachedFields:Map<String, Array<Field>> = new Map<String, Array<Field>>();
-    #end
     static function buildBehaviours():Array<Field> {
         if (Context.getLocalClass().get().isExtern) {
             return null;
@@ -823,11 +836,6 @@ class Macros {
             buildClonable(builder);
         }
 
-        #if ((haxe_ver < 4) || haxeui_heaps)
-        // TODO: this is a really ugly haxe3 hack / workaround - once haxe4 stabalises this *MUST* be removed - its likely brittle and ill conceived!
-        _cachedFields.set(builder.fullPath, builder.fields);
-        #end
-
         RTTI.save();
         
         #if haxeui_macro_times
@@ -842,6 +850,8 @@ class Macros {
 
     static function buildData():Array<Field> {
         var builder = new ClassBuilder(haxe.macro.Context.getBuildFields(), Context.getLocalType(), Context.currentPos());
+        builder.addMeta(":keep");
+        builder.addMeta(":keepSub");
         #if macro_times_verbose
         var stopComponentTimer = Context.timer(builder.fullPath);
         #end

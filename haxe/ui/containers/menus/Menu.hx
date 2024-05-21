@@ -1,7 +1,5 @@
 package haxe.ui.containers.menus;
 
-import haxe.ui.util.Timer;
-import haxe.ui.util.Variant;
 import haxe.ui.behaviours.DataBehaviour;
 import haxe.ui.behaviours.DefaultBehaviour;
 import haxe.ui.components.Button;
@@ -15,6 +13,8 @@ import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
 import haxe.ui.geom.Size;
 import haxe.ui.layouts.VerticalLayout;
+import haxe.ui.util.Timer;
+import haxe.ui.util.Variant;
 
 #if (haxe_ver >= 4.2)
 import Std.isOfType;
@@ -27,6 +27,8 @@ class Menu extends Box {
     @:behaviour(DefaultBehaviour)            public var menuStyleNames:String;
     @:behaviour(CurrentIndexBehaviour, 0)    public var currentIndex:Int;
     @:behaviour(CurrentItemBehaviour)        public var currentItem:MenuItem;
+
+    public var menuBar:MenuBar = null;
 
     /**
      Utility property to add a single `MenuEvent.MENU_SELECTED` event
@@ -171,9 +173,18 @@ class MenuEvents extends haxe.ui.events.Events {
             event.menu = _menu;
             event.menuItem = item;
             findRootMenu().dispatch(event);
-            
-            hideMenu();
-            removeScreenMouseDown();
+
+            if (_menu.menuBar == null) {
+                var beforeCloseEvent = new UIEvent(UIEvent.BEFORE_CLOSE);
+                beforeCloseEvent.relatedComponent = item;
+                findRootMenu().dispatch(beforeCloseEvent);
+                if (beforeCloseEvent.canceled) {
+                    return;
+                }
+
+                hideMenu();
+                removeScreenMouseDown();
+            }
             _menu.dispatch(new UIEvent(UIEvent.CLOSE));
         }
     }
@@ -288,7 +299,8 @@ class MenuEvents extends haxe.ui.events.Events {
         var offsetY:Float = 0;
         if (subMenu.style != null) {
             if (subMenu.style.paddingLeft > 1) {
-                offsetX = subMenu.style.paddingLeft - 1;
+                //offsetX = subMenu.style.paddingLeft - 1;
+                offsetX = subMenu.style.paddingLeft / 2;
             } else {
                 offsetX = 0;
             }

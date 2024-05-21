@@ -54,6 +54,16 @@ class ItemPicker extends InteractiveComponent implements IDataComponent implemen
         builder.panelSelectionEvent = _panelSelectionEvent;
         return value;
     }
+
+    public function showPanel() {
+        var builder:ItemPickerBuilder = cast(_compositeBuilder, ItemPickerBuilder);
+        builder.showPanel();
+    }
+
+    public function hidePanel() {
+        var builder:ItemPickerBuilder = cast(_compositeBuilder, ItemPickerBuilder);
+        builder.hidePanel();
+    }
 }
 
 class ItemPickerHandler {
@@ -246,6 +256,10 @@ class ItemPickerBuilder extends CompositeBuilder {
 
         pausePanelEvents();
         picker.addClass("selected", true, true);
+        if (picker.hasClass("rounded")) {
+            panelContainer.addClass("rounded");
+        }
+        panelContainer.styleNames = picker.styleNames;
         handler.onPanelShown();
         panelContainer.addClass(picker.cssName + "-panel", true, true);
         panelContainer.opacity = 0;
@@ -322,6 +336,7 @@ class ItemPickerBuilder extends CompositeBuilder {
             marginBottom = panelContainer.style.marginBottom;
             marginRight = panelContainer.style.marginRight;
             horizontalPadding = panelContainer.style.paddingLeft + panelContainer.style.paddingRight;
+            verticalPadding = panelContainer.style.paddingTop + panelContainer.style.paddingBottom;
             borderSize = panelContainer.style.borderTopSize;
         }
 
@@ -333,8 +348,19 @@ class ItemPickerBuilder extends CompositeBuilder {
             panelContainer.addComponent(_panelFiller);
         }
 
-        _panelFiller.width = panelWidth - picker.width;
-        if (_panelFiller.width > 0) {
+        var offset:Float = 0;
+        if (panelOrigin == "left" && panelContainer.style != null && panelContainer.style.borderRadiusTopRight != null) {
+            offset = panelContainer.style.borderRadiusTopRight;
+        } else if (panelOrigin == "right" && panelContainer.style != null && panelContainer.style.borderRadiusTopLeft != null) { 
+            offset = panelContainer.style.borderRadiusTopLeft - 1;
+        }
+
+        _panelFiller.width = panelWidth - picker.width - offset + 1;
+        var useFiller = true;
+        if (_panelFiller.style != null && _panelFiller.style.hidden == true) {
+            useFiller = false;
+        }
+        if (useFiller && _panelFiller.width > 0) {
             _panelFiller.show();
         } else {
             _panelFiller.hide();
@@ -346,7 +372,7 @@ class ItemPickerBuilder extends CompositeBuilder {
             _panelFiller.left = picker.width - borderSize;
         } else if (panelOrigin == "right") {
             panelContainer.left = picker.screenLeft + picker.width - panelWidth;
-            _panelFiller.left = borderSize;
+            _panelFiller.left = borderSize + offset;
         }
 
         if (panelPosition == "down") {
@@ -354,7 +380,7 @@ class ItemPickerBuilder extends CompositeBuilder {
             _panelFiller.top = 0;
         } else if (panelPosition == "up") {
             panelContainer.top = picker.screenTop - panelContainer.height - marginTop;
-            _panelFiller.top = panelHeight + borderSize;
+            _panelFiller.top = panelHeight + (verticalPadding - borderSize);
         }
     }
 
@@ -405,6 +431,10 @@ private class Layout extends DefaultLayout {
         }
         if (!component.autoWidth) {
             renderer.width = usableSize.width;
+            var itemText = findComponent("itemText", Component);
+            if (itemText != null) {
+                itemText.percentWidth = 100;
+            }
         } else {
 
         }
