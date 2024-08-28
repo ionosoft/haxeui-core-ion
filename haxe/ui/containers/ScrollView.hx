@@ -52,7 +52,7 @@ class ScrollView extends InteractiveComponent implements IScroller {
     @:clonable @:behaviour(VScrollThumbSize)                        public var vscrollThumbSize:Null<Float>;
     @:clonable @:behaviour(ThumbSize)                               public var thumbSize:Null<Float>;
     @:clonable @:behaviour(DefaultBehaviour, MouseButton.LEFT)      public var scrollMouseButton:MouseButton;
-    @:clonable @:behaviour(ScrollModeBehaviour, ScrollMode.DRAG)    public var scrollMode:ScrollMode;
+    @:clonable @:behaviour(ScrollModeBehaviour, ScrollMode.DEFAULT) public var scrollMode:ScrollMode;
     @:clonable @:behaviour(ScrollPolicyBehaviour)                   public var scrollPolicy:ScrollPolicy;
     @:clonable @:behaviour(HScrollPolicyBehaviour)                  public var horizontalScrollPolicy:ScrollPolicy;
     @:clonable @:behaviour(VScrollPolicyBehaviour)                  public var verticalScrollPolicy:ScrollPolicy;
@@ -66,6 +66,8 @@ class ScrollView extends InteractiveComponent implements IScroller {
     @:clonable @:behaviour(EmptyContentsText)                       public var emptyContentsText:String;
     
     @:call(EnsureVisible)                                           public function ensureVisible(component:Component):Void;
+    @:call(FindHorizontalScrollbar)                                 public function findHorizontalScrollbar():Component;
+    @:call(FindVerticalScrollbar)                                   public function findVerticalScrollbar():Component;
 
     @:event(ScrollEvent.SCROLL)                                     public var onScroll:ScrollEvent->Void;
     
@@ -103,6 +105,13 @@ private class EnsureVisible extends DefaultBehaviour {
         
         var c:Component = cast(param, Component);
         if (c == scrollview) {
+            return null;
+        }
+
+        if (!scrollview.isReady) {
+            scrollview.registerEvent(UIEvent.READY, function f(_) {
+                scrollview.ensureVisible(c);
+            });
             return null;
         }
 
@@ -193,6 +202,24 @@ private class EnsureVisible extends DefaultBehaviour {
             }
         }
         return p;
+    }
+}
+
+@:dox(hide) @:noCompletion
+@:access(haxe.ui.core.Component)
+private class FindHorizontalScrollbar extends DefaultBehaviour {
+    public override function call(param:Any = null):Variant {
+        var scrollview:ScrollView = cast(_component, ScrollView);
+        return scrollview.findComponent(HorizontalScroll, false);
+    }
+}
+
+@:dox(hide) @:noCompletion
+@:access(haxe.ui.core.Component)
+private class FindVerticalScrollbar extends DefaultBehaviour {
+    public override function call(param:Any = null):Variant {
+        var scrollview:ScrollView = cast(_component, ScrollView);
+        return scrollview.findComponent(VerticalScroll, false);
     }
 }
 
@@ -552,6 +579,15 @@ private class ThumbSize extends DataBehaviour {
 @:dox(hide) @:noCompletion
 @:access(haxe.ui.core.Component)
 private class ScrollModeBehaviour extends DataBehaviour {
+    public override function set(value:Variant) {
+        if (value == ScrollMode.HYBRID) {
+            _component.isHybridScroller = true;
+        } else if (value == ScrollMode.NATIVE) {
+            _component.isNativeScroller = true;
+        }
+        super.set(value);
+    }
+
     public override function validateData() {
         _component.registerInternalEvents(true);
     }
@@ -702,6 +738,7 @@ typedef Inertia = {
 }
 
 @:dox(hide) @:noCompletion
+@:access(haxe.ui.backend.ComponentImpl)
 class ScrollViewEvents extends haxe.ui.events.Events {
     private var _scrollview:ScrollView;
 
@@ -732,7 +769,7 @@ class ScrollViewEvents extends haxe.ui.events.Events {
             vscroll.registerEvent(ScrollEvent.SCROLL, onVScrollScroll);
         }
 
-        if (_scrollview.scrollMode == ScrollMode.DRAG || _scrollview.scrollMode == ScrollMode.INERTIAL) {
+        if (_scrollview.scrollMode == ScrollMode.DEFAULT || _scrollview.scrollMode == ScrollMode.DRAG || _scrollview.scrollMode == ScrollMode.INERTIAL || _scrollview.isHybridScroller) {
             registerEvent(MouseEvent.MIDDLE_MOUSE_DOWN, onMiddleMouseDown);
             registerEvent(MouseEvent.MOUSE_DOWN, onLeftMouseDown);
             registerEvent(MouseEvent.RIGHT_MOUSE_DOWN, onRightMouseDown);
@@ -1175,6 +1212,34 @@ class ScrollViewEvents extends haxe.ui.events.Events {
     @:access(haxe.ui.core.Component)
     private function onMouseWheel(event:MouseEvent) {
         if (_scrollview.isHybridScroller) {
+            if (_scrollview.scrollPolicy == ScrollPolicy.NEVER) {
+                return;
+            }
+            var primaryType:Class<Scroll> = VerticalScroll;
+            var secondaryType:Class<Scroll> = HorizontalScroll;
+            if (event.shiftKey) {
+                primaryType = HorizontalScroll;
+                secondaryType = VerticalScroll;
+            }
+            var scroll:Scroll = _scrollview.findComponent(primaryType, false);
+            if (scroll == null) {
+                scroll = _scrollview.findComponent(secondaryType, false);
+            }
+    
+            if (_scrollview.autoHideScrolls == true && _fadeTimer == null) {
+                scroll.fadeIn();
+            }
+            if (_scrollview.autoHideScrolls == true) {
+                if (_fadeTimer != null) {
+                    _fadeTimer.stop();
+                    _fadeTimer = null;
+                }
+                _fadeTimer = new Timer(300, function() {
+                    scroll.fadeOut();
+                    _fadeTimer.stop();
+                    _fadeTimer = null;
+                });
+            }
             return;
         }
 

@@ -24,9 +24,9 @@ import Std.is as isOfType;
 
 @:composite(MenuEvents, Builder, Layout)
 class Menu extends Box {
-    @:behaviour(DefaultBehaviour)            public var menuStyleNames:String;
-    @:behaviour(CurrentIndexBehaviour, 0)    public var currentIndex:Int;
-    @:behaviour(CurrentItemBehaviour)        public var currentItem:MenuItem;
+    @:behaviour(DefaultBehaviour)               public var menuStyleNames:String;
+    @:behaviour(CurrentIndexBehaviour, -1)      public var currentIndex:Int;
+    @:behaviour(CurrentItemBehaviour, null)     public var currentItem:MenuItem;
 
     public var menuBar:MenuBar = null;
 
@@ -52,8 +52,8 @@ private class CurrentIndexBehaviour extends DataBehaviour {
 
     public override function set(value:Variant) {
         var _menu:Menu = cast _component;
-        var itemsNbr = _menu.findComponents(MenuItem, 1).length;
-        if (value >= itemsNbr) {
+        var menuItemCount = _menu.findComponents(MenuItem, 1).length;
+        if (value >= menuItemCount) {
             value = 0;
         }
         super.set(value); 
@@ -62,8 +62,10 @@ private class CurrentIndexBehaviour extends DataBehaviour {
     private override function validateData() {
         var _menu:Menu = cast _component;
         var items = _menu.findComponents(MenuItem, 1);
-        var itemNbr:Int = _value;
-        _menu.currentItem = items[itemNbr]; 
+        var menuItemIndex:Int = _value;
+        if (menuItemIndex > 0) {
+            _menu.currentItem = items[menuItemIndex]; 
+        }
     }
 }
 
@@ -73,17 +75,18 @@ private class CurrentItemBehaviour extends DataBehaviour {
 
     private override function validateData() {
         var _menu:Menu = cast _component;
-        var menuItemC:Component = _value;
-        var menuItem:MenuItem = cast menuItemC;
+        var menuItem:MenuItem = cast _value.toComponent();
         var index = _menu.findComponents(MenuItem, 1).indexOf(menuItem);
         _menu.currentIndex = index;
 
         for (child in _menu.childComponents) {
-            child.removeClass(":hover", true, true);
+            //child.removeClass(":hover", true, true);
         }
 
         var item:Component = _value;
-        if (item != null) item.addClass(":hover", true, true);
+        if (menuItem != null) {
+            //menuItem.addClass(":hover", true, true);
+        }
     }
 }
 
@@ -99,7 +102,7 @@ class MenuEvents extends haxe.ui.events.Events {
     public var currentSubMenu:Menu = null;
     public var parentMenu:Menu = null;
 
-    private static inline var TIME_MOUSE_OPENS_MS:Int =400;
+    private static inline var TIME_MOUSE_OPENS_MS:Int = 400;
     private var _timer:Timer = null;
 
     public var button:Button = null;
@@ -172,20 +175,22 @@ class MenuEvents extends haxe.ui.events.Events {
             var event = new MenuEvent(MenuEvent.MENU_SELECTED);
             event.menu = _menu;
             event.menuItem = item;
-            findRootMenu().dispatch(event);
+            Timer.delay(function() {
+                findRootMenu().dispatch(event);
 
-            if (_menu.menuBar == null) {
-                var beforeCloseEvent = new UIEvent(UIEvent.BEFORE_CLOSE);
-                beforeCloseEvent.relatedComponent = item;
-                findRootMenu().dispatch(beforeCloseEvent);
-                if (beforeCloseEvent.canceled) {
-                    return;
+                if (_menu.menuBar == null) {
+                    var beforeCloseEvent = new UIEvent(UIEvent.BEFORE_CLOSE);
+                    beforeCloseEvent.relatedComponent = item;
+                    findRootMenu().dispatch(beforeCloseEvent);
+                    if (beforeCloseEvent.canceled) {
+                        return;
+                    }
+    
+                    hideMenu();
+                    removeScreenMouseDown();
                 }
-
-                hideMenu();
-                removeScreenMouseDown();
-            }
-            _menu.dispatch(new UIEvent(UIEvent.CLOSE));
+                _menu.dispatch(new UIEvent(UIEvent.CLOSE));
+            }, 100);
         }
     }
 
@@ -219,7 +224,7 @@ class MenuEvents extends haxe.ui.events.Events {
         if (subMenus.get(item) != null) {
             _menu.currentItem = item;
             lastEventSubMenu = event;
-            _timer = new Timer(TIME_MOUSE_OPENS_MS, function f() { 
+            _timer = new Timer(TIME_MOUSE_OPENS_MS, function() { 
                 showSubMenu(cast(subMenus.get(item), Menu), item);
                 _timer.stop();
                 _timer = null;
@@ -288,6 +293,7 @@ class MenuEvents extends haxe.ui.events.Events {
         var componentOffset = source.getComponentOffset();
         var left = source.screenLeft + source.actualComponentWidth + componentOffset.x;
         var top = source.screenTop;
+        subMenu.handleVisibility(false);
         Screen.instance.addComponent(subMenu);
         subMenu.validateNow();
 
@@ -314,6 +320,9 @@ class MenuEvents extends haxe.ui.events.Events {
         subMenu.top = top - offsetY;
 
         currentSubMenu = subMenu;
+        Toolkit.callLater(() -> {
+            subMenu.handleVisibility(true);
+        });
     }
 
     private function hideMenu() {

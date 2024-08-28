@@ -1663,7 +1663,7 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
     }
 
     @:dox(group = "Backend")
-    private function handleDisabled(show:Bool) {
+    private function handleDisabled(disable:Bool) {
     }
 
     @:dox(group = "Backend")
@@ -1706,14 +1706,20 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         return new Point(0, 0);
     }
 
-    private var isNativeScroller(get, null):Bool;
+    private var isNativeScroller(get, set):Bool;
     private function get_isNativeScroller():Bool {
         return false;
     }
+    private function set_isNativeScroller(value:Bool):Bool {
+        return value;
+    }
 
-    private var isHybridScroller(get, null):Bool;
+    private var isHybridScroller(get, set):Bool;
     private function get_isHybridScroller():Bool {
         return false;
+    }
+    private function set_isHybridScroller(value:Bool):Bool {
+        return value;
     }
 
     private function handleFrameworkProperty(id:String, value:Any) {
@@ -1885,7 +1891,7 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         var r:Class<Dynamic> = Type.getClass(this);
         while (r != null) {
             var c = Type.getClassName(r);
-            var t = Toolkit.nativeConfig.query('component[id=${c}].@class', null, this);
+            var t = Toolkit.nativeConfig.query('component[id=${c}].@id', null, this);
             if (t != null) {
                 _nativeClassName = c;
                 break;

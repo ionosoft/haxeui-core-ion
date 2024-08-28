@@ -1,9 +1,9 @@
 package haxe.ui.core;
 
-import haxe.ui.util.Color;
 import haxe.ui.components.Image;
 import haxe.ui.components.Label;
 import haxe.ui.containers.HBox;
+import haxe.ui.util.Color;
 
 class BasicItemRenderer extends ItemRenderer {
     private var _icon:Image;
@@ -31,8 +31,20 @@ class BasicItemRenderer extends ItemRenderer {
         addComponent(hbox);
     }
 
-    private override function updateValues(value:Dynamic, fieldList:Array<String> = null) {
-        super.updateValues(value, fieldList);
+    private override function updateValues(value:Dynamic, fieldList:Array<String> = null, currentRecursionLevel:Null<Int> = 0) {
+        super.updateValues(value, fieldList, currentRecursionLevel);
+
+        if (_label.text != null) {
+            _label.show();
+        } else {
+            _label.hide();
+        }
+
+        if (_icon.resource != null) {
+            _icon.show();
+        } else {
+            _icon.hide();
+        }
 
         if (value != null) {
             if (value.color != null) {

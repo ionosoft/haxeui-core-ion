@@ -95,6 +95,7 @@ class Macros {
 
         buildEvents(builder);
         applyProperties(builder);
+        addPropertiesToRTTI(builder);
         
         #if haxeui_macro_times
         stopTimer();
@@ -152,6 +153,42 @@ class Macros {
         #if haxeui_macro_times
         stopTimer();
         #end
+    }
+
+    static function addPropertiesToRTTI(builder:ClassBuilder) {
+        for (f in builder.fields) {
+            if (f.access.indexOf(APrivate) != -1 || f.access.indexOf(AStatic) != -1) {
+                continue;
+            }
+            if (f.name == "value") {
+                continue;
+            }
+            var isBehaviour = false;
+            for (m in f.meta) {
+                if (m.name == ":behaviour") {
+                    isBehaviour = true;
+                    break;
+                }
+            }
+            if (isBehaviour) {
+                continue;
+            }
+            var t = switch (f.kind) {
+                case FVar(t, _): t;
+                case FProp(_, _, t, _): t;
+                case _: null;
+            }
+
+            if (t != null) {
+                var allowed = switch (t) {
+                    case TFunction(args, ret): false;
+                    case _: true;
+                }
+                if (allowed) {
+                    RTTI.addClassProperty(builder.fullPath, f.name, ComplexTypeTools.toString(t));
+                }
+            }
+        }
     }
     
     static function buildFromXmlMeta(builder:ClassBuilder) {
@@ -361,6 +398,7 @@ class Macros {
         var stopTimer = Context.timer("build property binding");
         #end
 
+        var hasField = builder.hasField(f.name, true);
         var hasGetter = builder.findFunction("get_" + f.name) != null;
         var hasSetter = builder.findFunction("set_" + f.name) != null;
 
@@ -372,14 +410,14 @@ class Macros {
         if (hasGetter == false) {
             builder.addGetter(f.name, f.type, macro {
                 return $i{variable}.$field;
-            });
+            }, null, !hasField, hasField);
         }
 
         if (hasSetter == false) {
             builder.addSetter(f.name, f.type, macro {
                 $i{variable}.$field = value;
                 return value;
-            });
+            }, null, !hasField, hasField);
         }
 
         if (f.expr != null) {
@@ -810,12 +848,20 @@ class Macros {
                     }, false, true);
                 }
             } else {
+                var getterExpr = macro this.$propName;
+                var setterExpr = macro this.$propName = value;
+                var parts = propName.split(".");
+                if (parts.length > 1) {
+                    propName = parts[1];
+                    getterExpr = macro $i{parts[0]}.$propName;
+                    setterExpr = macro $i{parts[0]}.$propName = value;
+                }
                 builder.addGetter(f.name, macro: Dynamic, macro {
-                    return $i{propName};
+                    return $e{getterExpr};
                 }, false, true);
 
                 builder.addSetter(f.name, macro: Dynamic, macro {
-                    $i{propName} = value;
+                    this.$propName = value;
                     return value;
                 }, false, true);
             }

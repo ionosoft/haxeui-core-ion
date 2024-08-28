@@ -534,6 +534,16 @@ class Component extends ComponentImpl
         return child;
     }
 
+    // this specifies if the component is allowed to be disposed or not, it mainly comes in useful
+    // for things like haxeui-flixel that imposes states (and state switches) that have to be
+    // managed by haxeui's "screen" - this can mean when a state switch occurs it will try to
+    // dispose of all objects, which usually is fine, but in some cases its not what is wanted
+    // for example: Dialog.destroyOnClose = false. Although quite flixel specific, there may be use for 
+    // it in other, new, backends at some point (though currently no other backends have "states", so
+    // its not needed)
+    @:noCompletion
+    private var _allowDispose:Bool = true;
+
     /**
      * Removes this component from memory.
      * 
@@ -1410,13 +1420,21 @@ class Component extends ComponentImpl
         }
     }
 
+    public function toggleClass(name:String, invalidate:Bool = true, recursive:Bool = false) {
+        if (classes.indexOf(name) == -1) {
+            addClass(name, invalidate, recursive);
+        } else {
+            removeClass(name, invalidate, recursive);
+        }
+    }
+
     /**
      * A string representation of the `css` classes associated with this component
      */
     private var _styleNames:String = null;
     private var _styleNamesList:Array<String> = null;
     @:dox(group = "Style related properties and methods")
-    @clonable public var styleNames(get, set):String;
+    @:clonable public var styleNames(get, set):String;
     private function get_styleNames():String {
         return _styleNames;
     }
@@ -1579,6 +1597,13 @@ class Component extends ComponentImpl
         if (value == null) {
             //_layout = null;
             return value;
+        }
+
+        if (_compositeBuilder != null) {
+            var r = _compositeBuilder.setLayout(value);
+            if (r != null) {
+                return r;
+            }
         }
 
         if (_layout != null && Type.getClassName(Type.getClass(value)) == Type.getClassName(Type.getClass(_layout))) {

@@ -1,5 +1,6 @@
 package haxe.ui.core;
 
+import haxe.ui.util.RTTI;
 import haxe.ui.components.Image;
 import haxe.ui.components.Label;
 import haxe.ui.containers.Box;
@@ -9,12 +10,15 @@ import haxe.ui.events.ItemRendererEvent;
 import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
 import haxe.ui.util.Color;
+import haxe.ui.util.StringUtil;
 import haxe.ui.util.TypeConverter;
 import haxe.ui.util.Variant;
 
 class ItemRenderer extends Box {
     @:clonable public var autoRegisterInteractiveEvents:Bool = true;
     @:clonable public var recursiveStyling:Bool = false;
+    @:clonable public var allowLayoutProperties:Bool = true;
+    @:clonable public var maxRecursionLevel:Null<Int> = 5;
     
     public function new() {
         super();
@@ -121,8 +125,8 @@ class ItemRenderer extends Box {
                                     fieldList.push(i.substr(4));
                                 }
                             }
-                            _fieldList = fieldList;
                         }
+                        _fieldList = fieldList;
                     } else {
                         _fieldList = ["text"];
                     }
@@ -208,7 +212,11 @@ class ItemRenderer extends Box {
         dispatch(e2);
     }
 
-    private function updateValues(value:Dynamic, fieldList:Array<String> = null) {
+    private function updateValues(value:Dynamic, fieldList:Array<String> = null, currentRecursionLevel:Null<Int> = 0) {
+        if (currentRecursionLevel > maxRecursionLevel) {
+            return;
+        }
+
         if (fieldList == null) {
             fieldList = Reflect.fields(value);
         }
@@ -245,16 +253,34 @@ class ItemRenderer extends Box {
                     case _:
                         setComponentProperty(c, v, property);
                 }
-
-                c.show();
-            } else if (c != null) {
-                c.hide();
-            } else if (f != "id" && f != "layout") {
-                try {
-                    Reflect.setProperty(this, f, v);
-                } catch (e:Dynamic) {}
             } else if (Type.typeof(v) == TObject) {
-                updateValues(v);
+                updateValues(v, null, currentRecursionLevel + 1);
+            } else {
+                var isLayoutProp = false;
+                if (f == "layout") {
+                    f = "layoutName";
+                } else {
+                    isLayoutProp = StringTools.startsWith(f, "layout");
+                }
+                if (!isLayoutProp) {
+                    try {
+                        // "data" is a special case exception here as if the item renderer contained a "data" property
+                        // it would overwrite the item renderers data property, which is, for sure, NOT 
+                        // what we want to happen... ever.
+                        if (f != "data") {
+                            if (RTTI.hasPrimitiveClassProperty(this.className, f)) {
+                                Reflect.setProperty(this, f, v);
+                            }
+                        }
+                    } catch (e:Dynamic) { }
+                } else if (allowLayoutProperties) {
+                    var layoutProp = StringUtil.uncapitalizeFirstLetter(f.substring("layout".length));
+                    if (this.layout != null) {
+                        try {
+                            Reflect.setProperty(this.layout, layoutProp, v);
+                        } catch (e:Dynamic) { }
+                    }
+                }
             }
         }
     }
