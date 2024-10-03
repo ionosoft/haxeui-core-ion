@@ -660,31 +660,29 @@ class Component extends ComponentImpl
     }
 
     private function assignPositionClasses(invalidate:Bool = true) {
-        if (childComponents.length == 1) {
-            childComponents[0].addClasses(["first", "last"], invalidate);
+        var effectiveChildren = [];
+        for (c in childComponents) {
+            if (!c.includeInLayout || c.hidden) {
+                continue;
+            }
+            effectiveChildren.push(c);
+        }
+
+        if (effectiveChildren.length == 1) {
+            effectiveChildren[0].addClasses(["first", "last"], invalidate);
             return;
         }
-        var effectiveChildCount = 0;
-        for (i in 0...childComponents.length) {
-            var c = childComponents[i];
-            if (!c.includeInLayout) {
-                continue;
-            }
-            effectiveChildCount++;
-        }
+
         var n = 0;
-        for (i in 0...childComponents.length) {
-            var c = childComponents[i];
-            if (!c.includeInLayout) {
-                continue;
-            }
-            if (i == 0) {
+        for (c in effectiveChildren) {
+            if (n == 0) {
                 c.swapClass("first", "last", invalidate);
-            } else if (i == effectiveChildCount - 1) {
+            } else if (n == effectiveChildren.length - 1) {
                 c.swapClass("last", "first", invalidate);
             } else {
                 c.removeClasses(["first", "last"], invalidate);
             }
+
             n++;
         }
     }
@@ -696,6 +694,10 @@ class Component extends ComponentImpl
         LocaleManager.instance.unregisterComponent(this);
         handleDestroy();
         onDestroy();
+        if (_compositeBuilder != null) {
+            @:privateAccess _compositeBuilder._component = null;
+        }
+        _compositeBuilder = null;
     }
 
     private function onDestroy() {
@@ -738,10 +740,7 @@ class Component extends ComponentImpl
     @:dox(group = "Display tree related properties and methods")
     public function removeAllComponents(dispose:Bool = true) {
         if (_compositeBuilder != null) {
-            var b = _compositeBuilder.removeAllComponents(dispose);
-            if (b == true) {
-                return;
-            }
+            _compositeBuilder.removeAllComponents(dispose);
         }
         
         if (_children != null) {

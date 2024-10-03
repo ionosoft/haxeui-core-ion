@@ -112,7 +112,7 @@ class TabBarLayout extends DefaultLayout {
                 max = b.height;
             }
         }
-        size.height = max;
+        size.height = max + paddingTop + paddingBottom;
         return size;
     }
 }
@@ -290,6 +290,12 @@ private class RemoveTab extends Behaviour {
             }
 
             var removedButton = builder._container.removeComponentAt(index);
+            for (child in builder._childToButtonMap.keys()) {
+                if (builder._childToButtonMap.get(child) == removedButton) {
+                    builder._childToButtonMap.remove(child);
+                    break;
+                }
+            }
             var event = new UIEvent(UIEvent.CLOSE, index);
             event.target = removedButton;
             _component.dispatch(event);

@@ -241,41 +241,60 @@ class SimpleExpressionEvaluator {
                     for (propPart in propParts) {
                         ref = Reflect.field(ref, propPart);
                     }
-                    if (Reflect.hasField(ref, propName)) {
-                        result = Reflect.field(ref, propName);
-                    } else {
-                        result = Reflect.getProperty(ref, propName);
+                    if (propName != null) {
+                        if (Reflect.hasField(ref, propName)) {
+                            result = Reflect.field(ref, propName);
+                        } else {
+                            #if js
+                            var getter = js.Syntax.field(ref, "get_" + propName);
+                            if (getter != null) {
+                                result = js.Syntax.field(ref, "get_" + propName)();
+                            }
+                            #else
+                            result = Reflect.getProperty(ref, propName);
+                            #end
+                        }
                     }
                 }
             }
         }
         
-        if (r != null) {
-            switch (operation) {
-                case Add:
-                    result = result + r;
-                case Subtract:
-                    result = result - r;
-                case Multiply:
-                    result = result * r;
-                case Divide:
-                    result = result / r;
-                case Equals:
-                    result = result == r;
-                case NotEquals:
-                    result = result != r;
-                case GreaterThan:
-                    result = result > r;
-                case GreaterThanOrEquals:
-                    result = result >= r;
-                case LessThan:
-                    result = result < r;
-                case LessThanOrEquals:
-                    result = result <= r;
-                case LogicalAnd:
-                    result = result && r;
-                case LogicalOr:
-                    result = result || r;
+        if (operation != null) {
+            if (r != null) {
+                switch (operation) {
+                    case Add:
+                        result = result + r;
+                    case Subtract:
+                        result = result - r;
+                    case Multiply:
+                        result = result * r;
+                    case Divide:
+                        result = result / r;
+                    case Equals:
+                        result = result == r;
+                    case NotEquals:
+                        result = result != r;
+                    case GreaterThan:
+                        result = result > r;
+                    case GreaterThanOrEquals:
+                        result = result >= r;
+                    case LessThan:
+                        result = result < r;
+                    case LessThanOrEquals:
+                        result = result <= r;
+                    case LogicalAnd:
+                        result = result && r;
+                    case LogicalOr:
+                        result = result || r;
+                }
+            } else {
+                switch (operation) {
+                    case Equals:
+                        result = result == r;
+                    case NotEquals:    
+                        result = result != r;
+                    case _:    
+                }
             }
         }
         

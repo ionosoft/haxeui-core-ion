@@ -28,6 +28,7 @@ class NotificationManager extends EventDispatcher<NotificationEvent> {
     private static var DEFAULT_EXPIRY:Int = 3000;
 
     public var maxNotifications:Int = -1;
+    public var notificationDisplayDelayMs:Int = 50;
     public var animationFn:Array<Notification>->Array<AnimationBuilder> = AnimateFromBottom;
 
     private var _timer:Timer = null;
@@ -79,11 +80,22 @@ class NotificationManager extends EventDispatcher<NotificationEvent> {
         var notification = new Notification();
         notification.registerEvent(UIEvent.DESTROY, onNotificationDestroyed);
         notification.notificationData = notificationData;
-        if (!_isAnimating) {
-            pushNotification(notification);
+        if (notificationDisplayDelayMs <= 0) {
+            if (!_isAnimating) {
+                pushNotification(notification);
+            } else {
+                _addQueue.push(notification);
+                startTimer();
+            }
         } else {
-            _addQueue.push(notification);
-            startTimer();
+            Timer.delay(function() {
+                if (!_isAnimating) {
+                    pushNotification(notification);
+                } else {
+                    _addQueue.push(notification);
+                    startTimer();
+                }
+            }, notificationDisplayDelayMs);
         }
 
         return notification;
@@ -150,6 +162,10 @@ class NotificationManager extends EventDispatcher<NotificationEvent> {
         notification.opacity = 0;
         Screen.instance.addComponent(notification);
         Toolkit.callLater(function () {
+            // its possible that in this notification could have been destroyed in this one frame
+            if (@:privateAccess notification._isDisposed) {
+                return;
+            }
             notification.validateNow();
             var scx = Screen.instance.width;
             var scy = Screen.instance.height;
@@ -173,6 +189,10 @@ class NotificationManager extends EventDispatcher<NotificationEvent> {
 
         if (notification.notificationData.expiryMs > 0) {
             Timer.delay(function () {
+                // its possible that in this notification could have been destroyed in this time
+                if (@:privateAccess notification._isDisposed) {
+                    return;
+                }
                 removeNotification(notification);
             }, notification.notificationData.expiryMs);
         }
