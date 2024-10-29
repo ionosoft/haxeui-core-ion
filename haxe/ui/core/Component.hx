@@ -340,7 +340,6 @@ class Component extends ComponentImpl
         if (_compositeBuilder != null) {
             var v = _compositeBuilder.addComponent(child);
             if (v != null) {
-                v.scriptAccess = this.scriptAccess;
                 return v;
             }
         }
@@ -381,7 +380,6 @@ class Component extends ComponentImpl
         dispatch(event);
         child.dispatch(new UIEvent(UIEvent.COMPONENT_ADDED_TO_PARENT));
 
-        child.scriptAccess = this.scriptAccess;
         return child;
     }
 
@@ -422,7 +420,6 @@ class Component extends ComponentImpl
         if (_compositeBuilder != null) {
             var v = _compositeBuilder.addComponentAt(child, index);
             if (v != null) {
-                v.scriptAccess = this.scriptAccess;
                 return v;
             }
         }
@@ -461,7 +458,6 @@ class Component extends ComponentImpl
         dispatch(new UIEvent(UIEvent.COMPONENT_ADDED));
         child.dispatch(new UIEvent(UIEvent.COMPONENT_ADDED_TO_PARENT));
 
-        child.scriptAccess = this.scriptAccess;
         return child;
     }
 
@@ -557,6 +553,18 @@ class Component extends ComponentImpl
 
         this._isDisposed = true;
         this.removeAllComponents(true);
+
+        // its possible that a CompositeBuilder has hooked into core and overridden "removeAllComponents" without
+        // also hooking into the destroy sequence - which may be perfectly valid - in cases like this, we'll make
+        // doubly sure that when a component is disposed it disposes all children regardless - this is a safety
+        // measure to stop potential leaks
+        if (_children != null) {
+            while (_children.length > 0) {
+                var child = _children.pop();
+                child.disposeComponent();
+            }
+        }
+
         this.destroyComponent();
         this.unregisterEventsInternal();
         if (this.hasTextDisplay()) {
@@ -740,7 +748,10 @@ class Component extends ComponentImpl
     @:dox(group = "Display tree related properties and methods")
     public function removeAllComponents(dispose:Bool = true) {
         if (_compositeBuilder != null) {
-            _compositeBuilder.removeAllComponents(dispose);
+            var b = _compositeBuilder.removeAllComponents(dispose);
+            if (b == true) {
+                return;
+            }
         }
         
         if (_children != null) {
@@ -1136,6 +1147,16 @@ class Component extends ComponentImpl
      * @param show When enabled, ensures that this component is actually visible when the fade completes.
      */
     public function fadeIn(onEnd:Void->Void = null, show:Bool = true) {
+        if (opacity == 1) { // its already "faded in", lets do nothing
+            if (onEnd != null) {
+                onEnd();
+            }
+            if (show) {
+                Toolkit.callLater(this.show);
+            }
+            return;
+        }
+
         if (onEnd != null || show == true) {
             var prevStart = onAnimationStart;
             var prevEnd = onAnimationEnd;
@@ -1164,6 +1185,15 @@ class Component extends ComponentImpl
      * @param hide When enabled, ensures that this component is actually invisible when the fade completes.
      */
     public function fadeOut(onEnd:Void->Void = null, hide:Bool = true) {
+        if (opacity == 0) { // its already "faded out", lets do nothing
+            if (onEnd != null) {
+                onEnd();
+            }
+            if (hide) {
+                Toolkit.callLater(this.hide);
+            }
+            return;
+        }
         if (onEnd != null || hide == true) {
             var prevEnd = onAnimationEnd;
             onAnimationEnd = function(e) {
@@ -1742,30 +1772,7 @@ class Component extends ComponentImpl
     //***********************************************************************************************************
     // Script related
     //***********************************************************************************************************
-    
-    @:noCompletion private var _scriptAccess:Bool = true;
-    @:dox(group = "Script related properties and methods")
 
-    /**
-     * Whether or not this component is allowed to be exposed to script interpreters (defaults to `true`)
-     */
-    public var scriptAccess(get, set):Bool;
-    private function get_scriptAccess():Bool {
-        return _scriptAccess;
-    }
-    private function set_scriptAccess(value:Bool):Bool {
-        if (value == _scriptAccess) {
-            return value;
-        }
-        
-        _scriptAccess = value;
-        for (child in childComponents) {
-            child.scriptAccess = value;
-        }
-        
-        return value;
-    }
-    
     @:dox(group = "Script related properties and methods")
     public var namedComponents(get, null):Array<Component>;
     private function get_namedComponents():Array<Component> {
@@ -1920,7 +1927,9 @@ class Component extends ComponentImpl
     }
 
     private override function validateComponentData() {
-        behaviours.validateData();
+        if (behaviours != null) {
+            behaviours.validateData();
+        }
         
         if (_compositeBuilder != null) {
             _compositeBuilder.validateComponentData();

@@ -49,6 +49,17 @@ class TextArea extends InteractiveComponent implements IFocusable implements ICo
     @:clonable @:value(text)                public var value:Dynamic;
 
     /**
+     * A string, containing a pattern of characters that the user can enter. When unspecified, the text field accepts all characters.
+     * 
+     * Usage:
+     * 
+     *  - type out lone characters to include them specifically - `"abcde047"`
+     *  - use the `-` character to represent a range of characters - `"a-zA-Z0-9"` will accept characters from `a` to `z`, `A` to `Z` and `0` to `9`.
+     *  - prefix the string with a `^` for it to only accept characters that do not match the string's pattern - `"^abc"` will accept any character except `a`, `b` and `c`.
+     */
+     @:clonable @:behaviour(RestrictCharsBehaviour)          public var restrictChars:String;
+
+    /**
         Placeholder text to display inside the text area when `text` is empty.
     **/
     @:behaviour(PlaceholderBehaviour)       public var placeholder:String;
@@ -244,6 +255,36 @@ private class DataSourceBehaviour extends DataBehaviour {
 }
 
 @:dox(hide) @:noCompletion
+private class RestrictCharsBehaviour extends DataBehaviour {
+    public var regexp:EReg;
+
+    public override function validateData() {
+        var excludeEReg:EReg = ~/\^(.-.|.)/gu;
+        var excludeChars:String = '';
+
+        var includeChars:String = excludeEReg.map (_value, function (ereg:EReg) {
+            excludeChars += ereg.matched (1);
+            return '';
+        });
+
+        var testRegexpParts:Array<String> = [];
+
+        if (includeChars.length > 0) {
+            testRegexpParts.push ('[^$_value]');
+        }
+
+        if (excludeChars.length > 0) {
+            testRegexpParts.push ('[$excludeChars]');
+        }
+
+        regexp = new EReg ('(${testRegexpParts.join(' | ')})', 'g');
+
+        var textarea:TextArea = cast(_component, TextArea);
+        TextAreaHelper.validateText(textarea, textarea.text);
+    }
+}
+
+@:dox(hide) @:noCompletion
 private class PlaceholderBehaviour extends DataBehaviour {
     public override function validateData() {
         var textarea:TextArea = cast(_component, TextArea);
@@ -315,7 +356,6 @@ private class IconBehaviour extends DataBehaviour {
                 icon = new Image();
                 icon.id = "textarea-icon";
                 icon.addClass("icon");
-                icon.scriptAccess = false;
                 textarea.addComponentAt(icon, 0);
             }
             icon.resource = _value.toString();
@@ -334,6 +374,12 @@ private class TextAreaHelper {
         }
 
         var placeholderVisible:Bool = text.length == 0;
+        var regexp:EReg = cast(textarea.behaviours.find("restrictChars"), RestrictCharsBehaviour).regexp;  // TODO: seems like a crappy way to handle restrict chars
+
+        if (regexp != null) {
+            text = regexp.replace(text, "");
+        }
+
         if (textarea.placeholder != null) {
             if (textarea.focus == false) {
                 if (text.length == 0) {
@@ -365,6 +411,12 @@ private class TextAreaHelper {
         }
 
         var placeholderVisible:Bool = htmlText.length == 0;
+        var regexp:EReg = cast(textarea.behaviours.find("restrictChars"), RestrictCharsBehaviour).regexp;  // TODO: seems like a crappy way to handle restrict chars
+
+        if (regexp != null) {
+            htmlText = regexp.replace(htmlText, "");
+        }
+
         if (textarea.placeholder != null) {
             if (textarea.focus == false) {
                 if (htmlText.length == 0) {
@@ -603,7 +655,6 @@ private class TextAreaBuilder extends CompositeBuilder {
         hscroll.percentWidth = 100;
         hscroll.id = "textarea-hscroll";
         hscroll.allowFocus = false;
-        hscroll.scriptAccess = false;
         _component.addComponent(hscroll);
         _component.registerInternalEvents(true);
         return hscroll;
@@ -617,7 +668,6 @@ private class TextAreaBuilder extends CompositeBuilder {
         vscroll.percentHeight = 100;
         vscroll.id = "textarea-vscroll";
         vscroll.allowFocus = false;
-        vscroll.scriptAccess = false;
         _component.addComponent(vscroll);
         _component.registerInternalEvents(true);
         return vscroll;

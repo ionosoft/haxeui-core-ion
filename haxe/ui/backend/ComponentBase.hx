@@ -492,12 +492,12 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
         }
         // is it valid to assume it must have :hover?
         var hasHover = cast(this, Component).hasClass(":hover"); // TODO: might want to move "hasClass" et al to this class to avoid cast
-        if (!hasHover && screenBounds.containsPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
+        if (!hasHover && hitTest(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
             var mouseEvent = new MouseEvent(MouseEvent.MOUSE_OVER);
             mouseEvent.screenX = Screen.instance.currentMouseX;
             mouseEvent.screenY = Screen.instance.currentMouseY;
             dispatch(mouseEvent);
-        } else if (hasHover && !screenBounds.containsPoint(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
+        } else if (hasHover && !hitTest(Screen.instance.currentMouseX, Screen.instance.currentMouseY)) {
             var mouseEvent = new MouseEvent(MouseEvent.MOUSE_OUT);
             mouseEvent.screenX = Screen.instance.currentMouseX;
             mouseEvent.screenY = Screen.instance.currentMouseY;
@@ -1237,7 +1237,15 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
             c = c.parentComponent;
         }
 
-        _screenBounds.set(xpos, ypos, width, height);
+        var cx:Float = width;
+        if (componentWidth != null) {
+            cx = actualComponentWidth;
+        }
+        var cy:Float = height;
+        if (componentHeight != null) {
+            cy = actualComponentHeight;
+        }
+       _screenBounds.set(xpos, ypos, cx, cy);
 
         return _screenBounds;
      }
@@ -1702,8 +1710,9 @@ class ComponentBase extends ComponentSurface implements IClonable<ComponentBase>
     private function unmapEvent(type:String, listener:UIEvent->Void) {
     }
 
+    @:noCompletion private var _cachedComponentOffset:Point = new Point(0, 0);
     private function getComponentOffset():Point {
-        return new Point(0, 0);
+        return _cachedComponentOffset;
     }
 
     private var isNativeScroller(get, set):Bool;

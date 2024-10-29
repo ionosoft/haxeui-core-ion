@@ -134,6 +134,9 @@ private class Builder extends CompositeBuilder {
         var childIndex = _stack.getComponentIndex(child);
         if (childIndex != _stack.selectedIndex) {
             child.hide();
+        } else if (childIndex == _stack.selectedIndex) {
+            child.show();
+            _currentPage = child;
         }
     }
 }

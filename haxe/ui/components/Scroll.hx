@@ -116,7 +116,6 @@ class Scroll extends InteractiveComponent implements IDirectionalComponent imple
         if (b == null) {
             b = new Button();
             b.hidden = hidden;
-            b.scriptAccess = false;
             b.customStyle.native = false;
             b.id = 'scroll-${type}-button';
             b.addClass(type);
@@ -197,7 +196,7 @@ private class Events extends haxe.ui.events.Events  {
 
     private var _mouseDownOffset:Point;
     private function onThumbMouseDown(event:MouseEvent) {
-        //event.cancel();
+        event.cancel();
 
         _mouseDownOffset = new Point();
         _mouseDownOffset.x = event.screenX - _thumb.left + _scroll.layout.paddingLeft;

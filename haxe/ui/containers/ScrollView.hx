@@ -1451,9 +1451,10 @@ class ScrollViewBuilder extends CompositeBuilder {
         return r;
     }
 
-    public override function removeAllComponents(dispose:Bool = true) {
+    public override function removeAllComponents(dispose:Bool = true):Bool {
         _contents.removeAllComponents(dispose);
         checkEmptyContentsComponent();
+        return true;
     }
     
     public override function getComponentIndex(child:Component):Int {
@@ -1578,7 +1579,6 @@ class ScrollViewBuilder extends CompositeBuilder {
 
         if (vcw > usableSize.width && hscroll == null || _scrollview.horizontalScrollPolicy == ScrollPolicy.ALWAYS) {
             hscroll = new HorizontalScroll();
-            hscroll.scriptAccess = false;
             hscroll.includeInLayout = !_scrollview.autoHideScrolls;
             hscroll.hidden = _scrollview.autoHideScrolls;
             hscroll.percentWidth = 100;
@@ -1619,7 +1619,6 @@ class ScrollViewBuilder extends CompositeBuilder {
 
         if ((vch > usableSize.height && vscroll == null) || _scrollview.verticalScrollPolicy == ScrollPolicy.ALWAYS) {
             vscroll = new VerticalScroll();
-            vscroll.scriptAccess = false;
             vscroll.includeInLayout = !_scrollview.autoHideScrolls;
             vscroll.hidden = _scrollview.autoHideScrolls;
             vscroll.percentHeight = 100;

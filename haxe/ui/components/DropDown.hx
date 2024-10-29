@@ -133,10 +133,33 @@ private class DataSourceBehaviour extends DefaultBehaviour {
             return;
         }
 
+        var ds = value.toDataSource();
+        var currentItem = null;
+        var currentIndex = -1;
+        var dropDown = cast(_component, DropDown);
+        _component.registerEvent(UIEvent.CHANGE, (_) -> {
+            currentItem = dropDown.selectedItem;
+            currentIndex = dropDown.selectedIndex;
+        });
+        ds.onRemove = (index, item) -> {
+            if (item != currentItem) {
+                dropDown.selectedIndex = -1; // to force it to change
+                dropDown.selectedItem = currentItem;
+            } else {
+                dropDown.selectedIndex = -1; // to force it to change
+                dropDown.selectedIndex = index;
+            }
+        }
+        ds.onChange = () -> {
+            if (dropDown.dataSource.size == 0) {
+                dropDown.text = "";
+            }
+        }
+
         var handler:IDropDownHandler = cast(_component._compositeBuilder, DropDownBuilder).handler;
         handler.reset();
         if (_component.text == null && _component.isReady) {
-            cast(_component, DropDown).selectedIndex = 0;
+            dropDown.selectedIndex = 0;
         }
     }
 }
@@ -726,18 +749,15 @@ class DropDownEvents extends ButtonEvents {
                 var searchContainer = new VBox();
                 searchContainer.id = "dropdown-search-container";
                 searchContainer.addClass("dropdown-search-container");
-                searchContainer.scriptAccess = false;
 
                 var searchFieldContainer = new HBox();
                 searchFieldContainer.id = "dropdown-search-field-container";
                 searchFieldContainer.addClass("dropdown-search-field-container");
-                searchFieldContainer.scriptAccess = false;
                 searchFieldContainer.addComponent(searchField);
                 
                 var searchFieldSeparator = new Component();
                 searchFieldSeparator.id = "dropdown-search-field-separator";
                 searchFieldSeparator.addClass("dropdown-search-field-separator");
-                searchFieldSeparator.scriptAccess = false;
                 
                 searchContainer.addComponent(searchFieldContainer);
                 searchContainer.addComponent(searchFieldSeparator);
@@ -805,7 +825,7 @@ class DropDownEvents extends ButtonEvents {
             _wrapper.removeClass("popup-from-bottom");
             if (_dropdown.dropdownVerticalPosition == "bottom" || _wrapper.screenTop + _wrapper.actualComponentHeight > Screen.instance.actualHeight) {
                 _wrapper.addClass("popup-from-bottom");
-                _wrapper.top = (_dropdown.screenTop - _wrapper.actualComponentHeight) + Toolkit.scaleY;
+                _wrapper.top = (_dropdown.screenTop + componentOffset.y - _wrapper.actualComponentHeight) + Toolkit.scaleY;
                 _wrapper.syncComponentValidation();
                 _wrapper.validateNow();
                 var marginLeft = 0.0;
@@ -883,7 +903,6 @@ class DropDownEvents extends ButtonEvents {
         searchField.id = "dropdown-search-field";
         searchField.addClass("dropdown-search-field");
         searchField.placeholder = _dropdown.searchPrompt;
-        searchField.scriptAccess = false;
         searchField.registerEvent(UIEvent.CHANGE, onSearchChange);
         return searchField;
     }
