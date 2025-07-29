@@ -1,12 +1,9 @@
 package haxe.ui.util;
 
 import haxe.ui.core.Component;
-import haxe.ui.core.IEventDispatcher;
 import haxe.ui.events.UIEvent;
+import haxe.ui.core.IEventDispatcher;
 
-#if haxeui_expose_all
-@:expose
-#end
 class EventDispatcher<T:UIEvent> implements IEventDispatcher<T> {
     private var _eventMap:EventMap = new EventMap();
 

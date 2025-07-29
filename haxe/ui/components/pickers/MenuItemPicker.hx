@@ -13,7 +13,7 @@ import haxe.ui.util.Variant;
 @:composite(Builder)
 @:xml('
 <item-picker>
-    <hbox styleName="item-picker-renderer">
+    <hbox id="itemPickerRenderer">
         <image id="itemIcon" verticalAlign="center" />
         <label id="itemText" text="Select Item" verticalAlign="center" />
         <box height="100%" styleName="item-picker-trigger-icon-container">
@@ -165,9 +165,6 @@ private class Handler extends ItemPickerHandler {
                         menuItem.icon = Std.string(item.icon);
                         menuItem.id = item.id;
                         menuItem.userData = item;
-                        if (item.style != null) {
-                            menuItem.styleString = item.style;
-                        }
                         picker.addComponentAt(menuItem, i);
                 }
             } else {

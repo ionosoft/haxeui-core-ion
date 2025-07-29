@@ -284,12 +284,10 @@ class ToolTipManager {
 
         positionToolTip();
         Toolkit.callLater(function() {
-            if (_toolTip != null) { // _tooltip could have destroyed by other means in the window for callLater
-                if (fade == true) {
-                    _toolTip.fadeIn();
-                } else {
-                    _toolTip.show();
-                }
+            if (fade == true) {
+                _toolTip.fadeIn();
+            } else {
+                _toolTip.show();
             }
         });
 
@@ -370,7 +368,7 @@ class ToolTipManager {
     }
 
     private function createToolTipRenderer(options:ToolTipOptions):ItemRenderer {
-        if (options != null && options.renderer != null) {
+        if (options.renderer != null) {
             return options.renderer;
         }
 

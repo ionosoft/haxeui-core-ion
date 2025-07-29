@@ -1,6 +1,5 @@
 package haxe.ui.core;
 
-import haxe.ui.tooltips.ToolTipManager;
 import haxe.ui.backend.ComponentImpl;
 import haxe.ui.events.AnimationEvent;
 import haxe.ui.events.MouseEvent;
@@ -701,7 +700,6 @@ class Component extends ComponentImpl
             _compositeBuilder.destroy();
         }
         LocaleManager.instance.unregisterComponent(this);
-        ToolTipManager.instance.unregisterTooltip(this);
         handleDestroy();
         onDestroy();
         if (_compositeBuilder != null) {
@@ -2236,7 +2234,7 @@ class Component extends ComponentImpl
         }
     }
 
-    @:clonable private var recursivePointerEvents:Bool = true;
+    private var recursivePointerEvents:Bool = true;
     private function onPointerEventsMouseOver(e:MouseEvent) {
         addClass(":hover", true, recursivePointerEvents);
     }

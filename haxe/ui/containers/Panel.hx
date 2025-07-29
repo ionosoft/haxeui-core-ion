@@ -49,33 +49,14 @@ class Panel extends VBox {
         return super.set_percentHeight(value);
     }
 
-    public override function set_percentWidth(value:Null<Float>):Null<Float> {
-        contentContainer.percentWidth = 100;
-        return super.set_percentWidth(value);
-    }
-
     #if (haxeui_openfl || haxeui_nme || haxeui_flixel)
 
-    public override function set_width(value:Float):Float {
-        if (contentContainer != null) {
-            contentContainer.percentWidth = 100;
-        }
-        return super.set_width(value);
-    }
-
     public override function set_height(value:Float):Float {
-        if (contentContainer != null) {
-            contentContainer.percentHeight = 100;
-        }
+        contentContainer.percentHeight = 100;
         return super.set_height(value);
     }
 
     #else
-
-    public override function set_width(value:Null<Float>):Null<Float> {
-        contentContainer.percentWidth = 100;
-        return super.set_width(value);
-    }
 
     public override function set_height(value:Null<Float>):Null<Float> {
         contentContainer.percentHeight = 100;

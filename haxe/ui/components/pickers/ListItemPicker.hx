@@ -12,8 +12,6 @@ import haxe.ui.events.UIEvent;
 </item-picker>
 ')
 class ListItemPicker extends ItemPicker {
-    public var selectedIndex:Int = 0;
-    public var selectedItem:Dynamic = null;
 }
 
 private class Builder extends ItemPickerBuilder {
@@ -26,23 +24,17 @@ private class Handler extends ItemPickerHandler {
     public override function applyDataSource(ds:DataSource<Dynamic>) {
         var listItemPicker:ListItemPicker = cast picker;
         listItemPicker.listView.dataSource = ds;
-        var indexToSelect = listItemPicker.selectedIndex;
+        var indexToSelect = 0;
         if (indexToSelect != -1) {
             listItemPicker.listView.selectedIndex = indexToSelect;
             var r = renderer.findComponent(ItemRenderer);
-            if (r != null) {
-                r.data = listItemPicker.listView.selectedItem;
-            }
+            r.data = listItemPicker.listView.selectedItem;
         }
     }
 
     public override function onPanelSelection(event:UIEvent) {
         var listItemPicker:ListItemPicker = cast picker;
-        listItemPicker.selectedIndex = listItemPicker.listView.selectedIndex;
-        listItemPicker.selectedItem = listItemPicker.listView.selectedItem;
         var r = renderer.findComponent(ItemRenderer);
-        if (r != null) {
-            r.data = listItemPicker.listView.selectedItem;
-        }
+        r.data = listItemPicker.listView.selectedItem;
     }
 }

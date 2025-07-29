@@ -59,9 +59,7 @@ private class SelectedIndex extends DataBehaviour {
             builder._currentButton = button;
         }
         
-	var event = new UIEvent(UIEvent.CHANGE);
-        event.previousValue = _previousValue;
-        _component.dispatch(event);
+        _component.dispatch(new UIEvent(UIEvent.CHANGE));
     }
 }
 
@@ -153,32 +151,19 @@ class ButtonBarBuilder extends CompositeBuilder {
     }
     
     public override function addComponent(child:Component):Component {
-        if (!child.hasClass("button-bar-divider")) {
+        if ((child is Button)) {
             if (_bar.numComponents > 0) {
                 var divider = new Component();
                 divider.addClass("button-bar-divider");
                 _bar.addComponent(divider);
+
             }
-            child.registerEvent(UIEvent.SHOWN, onButtonShown);
-            child.registerEvent(UIEvent.HIDDEN, onButtonHidden);
-        }
-        if ((child is Button)) {
             if (_bar.selectedIndex == _bar.numComponents) {
                 cast(child, Button).selected = true;
             }
             cast(child, Button).toggle = _bar.toggle;
-        }
-        
-        return null;
-    }
-
-    public override function removeComponent(child:Component, dispose:Bool = true, invalidate:Bool = true):Component {
-        if (!child.hasClass("button-bar-divider")) {
-            var childIndex = _bar.getComponentIndex(child);
-            var followingChild = _bar.getComponentAt(childIndex + 1);
-            if (followingChild != null && followingChild.hasClass("button-bar-divider")) {
-                _bar.removeComponent(followingChild, true, invalidate);
-            }
+            child.registerEvent(UIEvent.SHOWN, onButtonShown);
+            child.registerEvent(UIEvent.HIDDEN, onButtonHidden);
         }
         
         return null;

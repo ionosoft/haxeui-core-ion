@@ -478,14 +478,6 @@ private class HScrollPageSize extends DataBehaviour {
         _scrollview = scrollview;
     }
 
-    public override function get():Variant {
-        var hscroll = _scrollview.findComponent(HorizontalScroll, false);
-        if (hscroll == null) {
-            return 0;
-        }
-        return hscroll.pageSize;
-    }
-
     public override function validateData() { // TODO: feels a bit ugly!
         if (_scrollview.virtual == true) {
             var hscroll = _scrollview.findComponent(HorizontalScroll, false);
@@ -530,14 +522,6 @@ private class VScrollPageSize extends DataBehaviour {
     public function new(scrollview:ScrollView) {
         super(scrollview);
         _scrollview = scrollview;
-    }
-
-    public override function get():Variant {
-        var vscroll = _scrollview.findComponent(VerticalScroll, false);
-        if (vscroll == null) {
-            return 0;
-        }
-        return vscroll.pageSize;
     }
 
     public override function validateData() { // TODO: feels a bit ugly!
@@ -1242,7 +1226,7 @@ class ScrollViewEvents extends haxe.ui.events.Events {
                 scroll = _scrollview.findComponent(secondaryType, false);
             }
     
-            if (_scrollview.autoHideScrolls == true && _fadeTimer == null && scroll != null) {
+            if (_scrollview.autoHideScrolls == true && _fadeTimer == null) {
                 scroll.fadeIn();
             }
             if (_scrollview.autoHideScrolls == true) {
@@ -1251,9 +1235,7 @@ class ScrollViewEvents extends haxe.ui.events.Events {
                     _fadeTimer = null;
                 }
                 _fadeTimer = new Timer(300, function() {
-                    if (scroll != null) {
-                        scroll.fadeOut();
-                    }
+                    scroll.fadeOut();
                     _fadeTimer.stop();
                     _fadeTimer = null;
                 });

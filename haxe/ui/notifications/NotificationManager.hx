@@ -11,9 +11,6 @@ import haxe.ui.util.Timer;
 
 using haxe.ui.animation.AnimationTools;
 
-#if haxeui_expose_all
-@:keep @:expose
-#end
 class NotificationManager extends EventDispatcher<NotificationEvent> {
     private static var _instance:NotificationManager;
     public static var instance(get, null):NotificationManager;

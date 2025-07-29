@@ -1002,11 +1002,10 @@ private class RemoveColumn extends Behaviour {
             return null;
         }
         for (c in header.findComponents(Column)) {
-            final id = c.id;
-            if (id == null) {
+            if (c.id == null) {
                 continue;
             }
-            if (id == param) {
+            if (c.text == param) {
                 header.removeComponent(c);
                 break;
             }

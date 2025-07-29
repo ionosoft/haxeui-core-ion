@@ -99,17 +99,10 @@ class PropertyEditorOptions extends PropertyEditor {
 
     @:bind(buttonBar, UIEvent.CHANGE)
     private function onButtonBarChange(_) {
-        if (buttonBar.selectedButton != null) {
-            onValueChanged(buttonBar.selectedButton.text);
-        } else {
-            onValueChanged(null);
-        }
+        onValueChanged(buttonBar.selectedButton.text);
     }
 
     public override function applyValue(value:Variant) {
-        if (value == null) {
-            buttonBar.selectedIndex = -1;
-        }
         for (button in buttonBar.findComponents(Button)) {
             if (button.text == value.toString() || button.id == value.toString()) {
                 button.selected = true;
@@ -168,9 +161,6 @@ class PropertyEditorNumber extends PropertyEditor {
         }
         if (property.step != null) {
             numberStepper.step = property.step;
-        }
-        if (property.forceStep != null) {
-            numberStepper.forceStep = property.forceStep;
         }
         if (property.precision != null) {
             numberStepper.precision = property.precision;

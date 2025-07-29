@@ -22,7 +22,6 @@ class KeyboardEvent extends UIEvent {
         c.altKey = this.altKey;
         c.ctrlKey = this.ctrlKey;
         c.shiftKey = this.shiftKey;
-        postClone(c);
         return c;
     }
 }

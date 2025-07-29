@@ -425,14 +425,8 @@ private class ListDropDownHandler extends DropDownHandler {
                 } else {
                     text = Std.string(data);
                 }
-                if (_dropdown.text != text) {
-                    dispatchChanged = true;
-                }
                 _dropdown.text = text;
             } else {
-                if (itemRenderer.data != data) {
-                    dispatchChanged = true;
-                }
                 itemRenderer.data = data;
             }
         }

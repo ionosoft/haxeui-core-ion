@@ -138,25 +138,13 @@ class ItemRenderer extends Box {
         updateValues(_data, _fieldList);
 
         if (autoRegisterInteractiveEvents) {
-            var components = findComponents(Component);
+            var components = findComponents(InteractiveComponent);
             for (c in components) {
-                if ((c is InteractiveComponent)) {
-                    if (c.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
-                        c.registerEvent(MouseEvent.CLICK, onItemClick);
-                    }
-                    if (c.hasEvent(UIEvent.CHANGE, onItemChange) == false) {
-                        c.registerEvent(UIEvent.CHANGE, onItemChange);
-                    }
-                } else if (c.style != null && c.style.pointerEvents != null) {
-                    if (c.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
-                        c.registerEvent(MouseEvent.CLICK, onItemClick);
-                    }
+                if (c.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
+                    c.registerEvent(MouseEvent.CLICK, onItemClick);
                 }
-            }
-
-            if (this.style != null && this.style.pointerEvents != null) {
-                if (this.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
-                    this.registerEvent(MouseEvent.CLICK, onItemClick);
+                if (c.hasEvent(UIEvent.CHANGE, onItemChange) == false) {
+                    c.registerEvent(UIEvent.CHANGE, onItemChange);
                 }
             }
         }
@@ -190,9 +178,7 @@ class ItemRenderer extends Box {
                         Reflect.setProperty(_data, event.target.id, v);
                     }
                 case _:
-                    if (Reflect.hasField(_data, event.target.id)) {
-                        Reflect.setProperty(_data, event.target.id, v);
-                    }
+                    Reflect.setProperty(_data, event.target.id, v);
             }
         }
 
@@ -225,9 +211,6 @@ class ItemRenderer extends Box {
         e.itemIndex = itemIndex;
         e.data = _data;
         dispatch(e);
-        if (e.canceled) {
-            event.cancel();
-        }
 
         var e2 = new ItemEvent(ItemEvent.COMPONENT_CLICK_EVENT);
         e2.bubble = true;
@@ -236,9 +219,6 @@ class ItemRenderer extends Box {
         e2.itemIndex = itemIndex;
         e2.data = _data;
         dispatch(e2);
-        if (e2.canceled) {
-            event.cancel();
-        }
     }
 
     private function updateValues(value:Dynamic, fieldList:Array<String> = null, currentRecursionLevel:Null<Int> = 0) {
@@ -333,10 +313,6 @@ class ItemRenderer extends Box {
                 if (c.hasEvent(UIEvent.CHANGE, onItemChange) == false) {
                     c.registerEvent(UIEvent.CHANGE, onItemChange);
                 }
-                if (c.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
-                    c.registerEvent(MouseEvent.CLICK, onItemClick);
-                }
-            } else if (c.style != null && c.style.pointerEvents != null) {
                 if (c.hasEvent(MouseEvent.CLICK, onItemClick) == false) {
                     c.registerEvent(MouseEvent.CLICK, onItemClick);
                 }

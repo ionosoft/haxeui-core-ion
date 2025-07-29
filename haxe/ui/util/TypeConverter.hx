@@ -27,11 +27,11 @@ class TypeConverter {
             return input;
         }
         switch (type.toLowerCase()) {
-            case "string" | "null<string>":
+            case "string":
                 return Std.string(input);
-            case "bool" | "null<bool>":
+            case "bool":
                 return Std.string(input) == "true";
-            case "int" | "null<int>":
+            case "int":
                 if (input == null) {
                     return 0;
                 }
@@ -40,7 +40,7 @@ class TypeConverter {
                     return 0;
                 }
                 return r;
-            case "float" | "null<float>":
+            case "float":
                 if (input == null) {
                     return 0;
                 }
@@ -49,7 +49,7 @@ class TypeConverter {
                     return 0;
                 }
                 return r;
-            case "color" | "null<color>":
+            case "color":
                 return Color.fromString(Std.string(input));
             case "variant" | "dynamic" | "scalemode" | "selectionmode" | "scrollpolicy" | "scrollmode":
                 return input;
