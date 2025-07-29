@@ -154,11 +154,15 @@ class ButtonLayout extends DefaultLayout {
             var label:Label = component.findComponent(Label, false);
             var ucx = usableSize.width;
             if (label != null) {
+                //  label mustn't be bigger than usable size
+                //  and label must be resized to auto calculated width if it's bigger than label
+                //  ( don't force multiline into space when a one line can fit)
                 if (label.width > 0 && _component.componentWidth > 0 && ucx > 0 && label.width >= ucx) {
-                    label.width =  ucx;
+                    label.width = ucx;
                 }  else if (label.width > 0 && _component.componentWidth > 0 && ucx > 0) {
-                    //  devezas  so the label width "recovers" when dynamically (percent wise) we change the width of the button from lower (that has the text wrapped) to higher:
-                    label.width = label.layout.calcAutoWidth(); 
+                    // When we did label.width, we removed autowidth, so we need to check manually
+                    var autoWidth = label.layout.calcAutoWidth();
+                    if (autoWidth > label.width) label.width = autoWidth;
                 }
             }
             
@@ -170,6 +174,10 @@ class ButtonLayout extends DefaultLayout {
 
         if (_component.autoHeight == false) {
             var icon:Image = component.findComponent("button-icon", false);
+            if (icon != null && icon.hidden) {
+                icon = null;
+            }
+    
             var ucy = usableSize.height;
             if (icon != null) {
                 if (icon.height > 0 && ucy > 0 && icon.height > ucy) {
@@ -184,6 +192,10 @@ class ButtonLayout extends DefaultLayout {
     private override function get_usableSize():Size {
         var size = super.get_usableSize();
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
+
         var textAlign = cast(component, Button).textAlign;
         
         if (icon != null && (iconPosition == "far-right" || iconPosition == "far-left" || iconPosition == "center-left" || iconPosition == "center-right") && textAlign =="center") {
@@ -198,6 +210,9 @@ class ButtonLayout extends DefaultLayout {
         var exclusions:Array<Component> = [];
         var itemRenderer = component.findComponent(ItemRenderer);
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
         if (itemRenderer != null && isIconRelevant()) {
             exclusions.push(icon);
         }
@@ -217,7 +232,7 @@ class ButtonLayout extends DefaultLayout {
     
     private inline function isIconRelevant() {
         var icon:Image = component.findComponent("button-icon", false);
-        return icon != null && icon.componentWidth != 0 && icon.componentHeight !=0 && (iconPosition == "far-right" || iconPosition == "far-left" || iconPosition == "left" || iconPosition == "right" || iconPosition == "center-right" || iconPosition == "center-left");
+        return icon != null && icon.hidden == false && icon.componentWidth != 0 && icon.componentHeight !=0 && (iconPosition == "far-right" || iconPosition == "far-left" || iconPosition == "left" || iconPosition == "right" || iconPosition == "center-right" || iconPosition == "center-left");
     }
     
     private override function repositionChildren() {
@@ -228,7 +243,7 @@ class ButtonLayout extends DefaultLayout {
             label = null;
         }
         var icon:Image = component.findComponent("button-icon", false);
-        if (icon != null && icon.hidden == true) {
+        if (icon != null && icon.hidden) {
             icon = null;
         }
 
@@ -250,6 +265,9 @@ class ButtonLayout extends DefaultLayout {
     private function calcLabelPositionTop():Float {
         var label:Label = component.findComponent(Label, false);
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
 
         if (label != null  && (icon == null || icon.componentWidth == 0 || icon.componentHeight == 0)){
             return Std.int((component.componentHeight / 2) - (label.componentHeight / 2)) + marginTop(label) - marginBottom(label);
@@ -273,6 +291,10 @@ class ButtonLayout extends DefaultLayout {
 
     private function calcIconPositionTop():Float {
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
+
         var label:Label = component.findComponent(Label, false);
 
         if (label == null && icon != null) {
@@ -299,6 +321,10 @@ class ButtonLayout extends DefaultLayout {
     private function calcLabelPositionLeft():Float {
         var label:Label = component.findComponent(Label, false);
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
+
         var textAlign = cast(component, Button).textAlign;
 
         if (label != null  && (icon == null || icon.componentWidth == 0 || icon.componentHeight == 0)){
@@ -364,6 +390,10 @@ class ButtonLayout extends DefaultLayout {
 
     private function calcIconPositionLeft(labelLeft:Float = 0):Float {
         var icon:Image = component.findComponent("button-icon", false);
+        if (icon != null && icon.hidden) {
+            icon = null;
+        }
+
         var label:Label = component.findComponent(Label, false);
         var textAlign = cast(component, Button).textAlign;
 
@@ -508,12 +538,14 @@ private class TextBehaviour extends DataBehaviour {
             var label:Label = _component.findComponent(Label, false);
             if (_value == null || _value.isNull) {
                 if (label != null) {
+                    _component.removeClass("has-label", false);
                     _component.removeComponent(label);
                 }
             } else {
                 if (label == null) {
                     label = new Label();
                     label.id = "button-label";
+                    _component.addClass("has-label", false);
                     _component.addComponent(label);
                     _component.invalidateComponentStyle(true);
                 }
@@ -530,6 +562,7 @@ private class IconBehaviour extends DataBehaviour {
 
         if ((_value == null || _value.isNull || _value == "") && icon != null) {
             _component.customStyle.icon = null;
+            _component.removeClass("has-icon", false);
             _component.removeComponent(icon);
             return;
         }
@@ -537,7 +570,14 @@ private class IconBehaviour extends DataBehaviour {
         if (icon == null) {
             icon = new Image();
             icon.addClass("icon");
+            if (_component.hasClass(":hover")) {
+                icon.addClass(":hover");
+            }
+            if (_component.hasClass(":down")) {
+                icon.addClass(":down");
+            }
             icon.id = "button-icon";
+            _component.addClass("has-icon", false);
             _component.addComponentAt(icon, 0);
             _component.invalidateComponentStyle(true);
         }
