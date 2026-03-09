@@ -78,9 +78,14 @@ class EventMap  {
         var arr:FunctionArray<UIEvent->Void> = _map.get(type);
         if (arr != null && arr.length > 0) {
             arr = arr.copy();
-            for (listener in arr) {
+            var it = arr.iterator();
+            while (it != null && it.hasNext()) {
+                var listener = it.next();
                 if (event.canceled) {
                     break;
+                }
+                if (listener == null || listener.callback == null) {
+                    continue;
                 }
 
                 var c = event.clone();
