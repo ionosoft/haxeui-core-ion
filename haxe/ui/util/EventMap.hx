@@ -78,13 +78,15 @@ class EventMap  {
         var arr:FunctionArray<UIEvent->Void> = _map.get(type);
         if (arr != null && arr.length > 0) {
             arr = arr.copy();
-            var it = arr.iterator();
-            while (it != null && it.hasNext()) {
-                var listener = it.next();
+            var len = arr.length;
+            var i = 0;
+            while (i < len) {
+                var cb = arr.get(i);
+                i++;
                 if (event.canceled) {
                     break;
                 }
-                if (listener.callback == null) {
+                if (cb == null) {
                     continue;
                 }
 
@@ -92,7 +94,7 @@ class EventMap  {
                 if (c.target == null) {
                     c.target = target;
                 }
-                listener.callback(c);
+                cb(c);
                 event.copyFrom(c);
                 event.canceled = c.canceled;
             }
