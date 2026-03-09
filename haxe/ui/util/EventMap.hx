@@ -84,7 +84,7 @@ class EventMap  {
                 if (event.canceled) {
                     break;
                 }
-                if (listener == null || listener.callback == null) {
+                if (listener.callback == null) {
                     continue;
                 }
 
